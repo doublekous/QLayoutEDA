@@ -41,6 +41,12 @@ private slots:
     void onFileExportGDS();
     void onFileImportGDS();
     
+public:
+    // 导入 GDS 文件（可从外部调用）
+    void onImportGDS(const QString& filePath);
+    
+private slots:
+    
     // 编辑操作
     void onEditUndo();
     void onEditRedo();
@@ -63,6 +69,9 @@ private slots:
     void onToolDrawPolygon();
     void onToolDrawPath();
     void onToolDrawCircle();
+    
+    // 图形创建
+    void onObjectCreated(const QString& type, const QRectF& bounds);
     
     // 帮助
     void onHelpAbout();
