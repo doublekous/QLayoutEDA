@@ -84,6 +84,19 @@ target_link_libraries(test_integration
 add_test(NAME test_integration COMMAND test_integration)
 
 # ============================================================
+# 选择功能测试 (Issue #7)
+# ============================================================
+add_executable(test_selection
+    test_selection.cpp
+)
+target_include_directories(test_selection PRIVATE ${TEST_INCLUDE_DIRS})
+target_link_libraries(test_selection 
+    graphic_module 
+    Qt5::Test
+)
+add_test(NAME test_selection COMMAND test_selection)
+
+# ============================================================
 # GDS 解析器测试
 # ============================================================
 add_executable(test_simple
