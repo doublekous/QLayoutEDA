@@ -1,0 +1,397 @@
+========================================
+=== GDS 解析统计 ===
+文件: "D:/testFile/20250530/Topcell_all_layout.gds"
+文件大小: 135816790 bytes ( 129.525 MB)
+结构数量: 102
+顶层结构: "top_cell2"
+  结构: "Res_bansui_1_base_$1" | BOUNDARY: 310 | PATH: 0 | TEXT: 0 | SREF: 76437 | AREF: 0
+  结构: "cell_ab(8)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "test_JJ(2)" | BOUNDARY: 6 | PATH: 0 | TEXT: 0 | SREF: 1 | AREF: 0
+  结构: "cell_ab(2)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "cell_ab(22)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "cell_ab(3)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "z_line_bit" | BOUNDARY: 2 | PATH: 0 | TEXT: 1 | SREF: 1 | AREF: 0
+  结构: "cell_ab(10)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "grid-cell-Base$1" | BOUNDARY: 1 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "Mark_offset(1)" | BOUNDARY: 20 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "Res_bansui_1_ab_base_" | BOUNDARY: 0 | PATH: 0 | TEXT: 0 | SREF: 241 | AREF: 15
+  结构: "top_cell" | BOUNDARY: 17 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "line_mark" | BOUNDARY: 2120 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "res_ti_huan(zhihou-weitongmianouhe)" | BOUNDARY: 0 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "cell_ab(15)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "cell_ab(1)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "TiNPad&Inpillar(1)(1)" | BOUNDARY: 0 | PATH: 0 | TEXT: 0 | SREF: 750 | AREF: 0
+  结构: "tinpad&inpillar(1)(1)" | BOUNDARY: 2 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "cell_ab(7)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "z_line_ouhe_wujj_zuoxia" | BOUNDARY: 2 | PATH: 0 | TEXT: 1 | SREF: 0 | AREF: 0
+  结构: "grid_cell_Flip_2(1)$1" | BOUNDARY: 1 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "grid-cell-Base" | BOUNDARY: 1 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "cell_ab(25)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "tinpad&inpillar(1)(2)" | BOUNDARY: 4 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "cell_ab(17)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "marker_Distance" | BOUNDARY: 10 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "cell_ab(18)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "pad_out(2)" | BOUNDARY: 1 | PATH: 0 | TEXT: 1 | SREF: 0 | AREF: 0
+  结构: "x_line_zuo" | BOUNDARY: 1 | PATH: 0 | TEXT: 1 | SREF: 0 | AREF: 0
+  结构: "cell_ab(23)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "cell_ab(5)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "top_cell(2)" | BOUNDARY: 17 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "z_line_ouhe_wujj_youxia" | BOUNDARY: 2 | PATH: 0 | TEXT: 1 | SREF: 0 | AREF: 0
+  结构: "Res_bansui_1_ab_base_$1" | BOUNDARY: 0 | PATH: 0 | TEXT: 0 | SREF: 241 | AREF: 15
+  结构: "grid_cell_Flip(1)" | BOUNDARY: 1 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "top_cell2" | BOUNDARY: 13 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "cell_ab(4)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "via" | BOUNDARY: 246 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "top_cell2$1" | BOUNDARY: 13 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "cell_ab(11)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "QGD-flip" | BOUNDARY: 73 | PATH: 0 | TEXT: 0 | SREF: 17 | AREF: 0
+  结构: "cell_ab(12)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "tinpad&inpillar(5)" | BOUNDARY: 4 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "grid_cell_Base(2)(1)" | BOUNDARY: 1 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "bit-biaoshi" | BOUNDARY: 396 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "Linktest_AB" | BOUNDARY: 214 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "Singlebit_V8_2(1)" | BOUNDARY: 507 | PATH: 0 | TEXT: 0 | SREF: 7 | AREF: 0
+  结构: "cell_ab(19)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "z_line_ouhe_zuoxia" | BOUNDARY: 2 | PATH: 0 | TEXT: 1 | SREF: 1 | AREF: 0
+  结构: "JJTest_teststructure" | BOUNDARY: 7 | PATH: 0 | TEXT: 0 | SREF: 1 | AREF: 0
+  结构: "z_line_ouhe_youxia" | BOUNDARY: 2 | PATH: 0 | TEXT: 1 | SREF: 1 | AREF: 0
+  结构: "res_ti_huan(zhihou)" | BOUNDARY: 0 | PATH: 0 | TEXT: 0 | SREF: 3 | AREF: 0
+  结构: "cell_ab(26)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "tinpad-wgd(1)" | BOUNDARY: 2 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "TiNPad&Inpillar(3)" | BOUNDARY: 0 | PATH: 0 | TEXT: 0 | SREF: 154708 | AREF: 0
+  结构: "grid_cell_Flip_2(1)" | BOUNDARY: 1 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "AB" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "grid_cell_Flip(1)$1" | BOUNDARY: 1 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "Res_bansui_1_base_" | BOUNDARY: 310 | PATH: 0 | TEXT: 0 | SREF: 76437 | AREF: 0
+  结构: "kongqiqiao(1)" | BOUNDARY: 2244 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "tinpad&inpillar(1)" | BOUNDARY: 4 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "wbpad" | BOUNDARY: 1 | PATH: 0 | TEXT: 1 | SREF: 0 | AREF: 0
+  结构: "cell_ab(14)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "x_line_you" | BOUNDARY: 1 | PATH: 0 | TEXT: 1 | SREF: 0 | AREF: 0
+  结构: "Res_bansui_1_ab_Flip_$1" | BOUNDARY: 312 | PATH: 0 | TEXT: 0 | SREF: 77691 | AREF: 0
+  结构: "Marker_positive" | BOUNDARY: 5 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "Stepper_marker(3)$2$1" | BOUNDARY: 684 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "Singlebit_V8_2(1)$1" | BOUNDARY: 507 | PATH: 0 | TEXT: 0 | SREF: 7 | AREF: 0
+  结构: "tinpad&inpillar(6)" | BOUNDARY: 4 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "cell_ab" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "Res_bansui_1_ab_Flip_" | BOUNDARY: 1221 | PATH: 0 | TEXT: 0 | SREF: 77691 | AREF: 0
+  结构: "tinpad-wgd" | BOUNDARY: 2 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "cell_ab(9)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "Stepper_marker(3)" | BOUNDARY: 684 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "Linktest_AB$1" | BOUNDARY: 214 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "wbpad(1)" | BOUNDARY: 1 | PATH: 0 | TEXT: 1 | SREF: 0 | AREF: 0
+  结构: "topcell000111" | BOUNDARY: 15494 | PATH: 3 | TEXT: 58 | SREF: 736800 | AREF: 0
+  结构: "cell_ab(24)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "Stepper_marker(3)$2" | BOUNDARY: 684 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "cell_ab(16)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "cell_ab(20)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "Singlebit_V8_2_GRID_ARRAY(1)$1" | BOUNDARY: 0 | PATH: 0 | TEXT: 0 | SREF: 102417 | AREF: 0
+  结构: "cell_ab(27)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "tinpad&inpillar(4)" | BOUNDARY: 2 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "Marker_Flip_Base(1)" | BOUNDARY: 82 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "Res_bansui_1_base_(2)" | BOUNDARY: 310 | PATH: 0 | TEXT: 0 | SREF: 77691 | AREF: 0
+  结构: "Stepper_marker(2)(1)" | BOUNDARY: 32 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "TiNPad&Inpillar" | BOUNDARY: 0 | PATH: 0 | TEXT: 0 | SREF: 690 | AREF: 0
+  结构: "cell_ab(13)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "tinpad&inpillar" | BOUNDARY: 4 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "AB$1" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "Stepper_marker(3)$4" | BOUNDARY: 684 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "Singlebit_V8_2_GRID_ARRAY(1)" | BOUNDARY: 0 | PATH: 0 | TEXT: 0 | SREF: 102417 | AREF: 0
+  结构: "x_line_shang" | BOUNDARY: 1 | PATH: 0 | TEXT: 1 | SREF: 0 | AREF: 0
+  结构: "res_ti_huan(zhihou)(1)" | BOUNDARY: 25912 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "cell_ab(21)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "Stepper_marker(3)$3" | BOUNDARY: 684 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "Line-Maker" | BOUNDARY: 0 | PATH: 0 | TEXT: 0 | SREF: 1 | AREF: 0
+  结构: "tinpad&inpillar(2)" | BOUNDARY: 4 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "test_JJ(1)" | BOUNDARY: 6 | PATH: 0 | TEXT: 0 | SREF: 1 | AREF: 0
+  结构: "Stepper_marker(1)(1)" | BOUNDARY: 32 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+  结构: "cell_ab(6)" | BOUNDARY: 3 | PATH: 0 | TEXT: 0 | SREF: 0 | AREF: 0
+---
+总计 BOUNDARY: 54215
+总计 PATH: 3
+总计 TEXT: 69
+总计 SREF: 1484252
+总计 AREF: 30 (展开后实例: 150 )
+总计基础图元: 54287
+========================================
+四叉树构建完成: 总图形数= 13
+=== 四叉树构建完成 ===
+节点数: 1
+图形数: 13
+最大深度: 10
+构建耗时: 0 ms
+=== Building Cell Hierarchy (KLayout Style) ===
+Total cells: 102
+Referenced cells: 99
+Warning: topStructure "top_cell2" is referenced by other cells, treating as top-level anyway
+
+=== Top-level Cells ( 4 ) ===
+   "Singlebit_V8_2_GRID_ARRAY(1)$1"
+    - children: 2
+   "topcell000111"
+    - children: 66
+   "top_cell2"
+    - children: 0
+   "Res_bansui_1_ab_Flip_$1"
+    - children: 1
+
+=== Focus Cells Analysis ===
+
+Cell: "Res_bansui_1_ab_Flip_$1"
+  isTopLevel: true
+  parents count: 0
+  children count: 1
+
+Cell: "Singlebit_V8_2_GRID_ARRAY(1)$1"
+  isTopLevel: true
+  parents count: 0
+  children count: 2
+
+Cell: "TiNPad&Inpillar(3)"
+  isTopLevel: false
+  parents count: 1
+  children count: 1
+  parents: ("topcell000111")
+
+Cell: "topcell000111"
+  isTopLevel: true
+  parents count: 0
+  children count: 66
+
+=== Cell Parent-Child Summary ===
+"Res_bansui_1_base_$1" | parents: 1 | children: 1 | isTopLevel: false
+"cell_ab(8)" | parents: 1 | children: 0 | isTopLevel: false
+"test_JJ(2)" | parents: 1 | children: 1 | isTopLevel: false
+"cell_ab(2)" | parents: 1 | children: 0 | isTopLevel: false
+"cell_ab(22)" | parents: 1 | children: 0 | isTopLevel: false
+"z_line_bit" | parents: 1 | children: 1 | isTopLevel: false
+"cell_ab(3)" | parents: 1 | children: 0 | isTopLevel: false
+"cell_ab(10)" | parents: 1 | children: 0 | isTopLevel: false
+"grid-cell-Base$1" | parents: 1 | children: 0 | isTopLevel: false
+"Mark_offset(1)" | parents: 1 | children: 0 | isTopLevel: false
+"Res_bansui_1_ab_base_" | parents: 1 | children: 2 | isTopLevel: false
+"top_cell" | parents: 3 | children: 0 | isTopLevel: false
+"line_mark" | parents: 1 | children: 0 | isTopLevel: false
+"cell_ab(15)" | parents: 1 | children: 0 | isTopLevel: false
+"res_ti_huan(zhihou-weitongmianouhe)" | parents: 1 | children: 0 | isTopLevel: false
+"cell_ab(1)" | parents: 1 | children: 0 | isTopLevel: false
+"cell_ab(7)" | parents: 1 | children: 0 | isTopLevel: false
+"tinpad&inpillar(1)(1)" | parents: 1 | children: 0 | isTopLevel: false
+"z_line_ouhe_wujj_zuoxia" | parents: 1 | children: 0 | isTopLevel: false
+"grid_cell_Flip_2(1)$1" | parents: 1 | children: 0 | isTopLevel: false
+"TiNPad&Inpillar(1)(1)" | parents: 1 | children: 1 | isTopLevel: false
+"grid-cell-Base" | parents: 1 | children: 0 | isTopLevel: false
+"cell_ab(25)" | parents: 1 | children: 0 | isTopLevel: false
+"tinpad&inpillar(1)(2)" | parents: 1 | children: 0 | isTopLevel: false
+"cell_ab(17)" | parents: 1 | children: 0 | isTopLevel: false
+"marker_Distance" | parents: 1 | children: 0 | isTopLevel: false
+"pad_out(2)" | parents: 1 | children: 0 | isTopLevel: false
+"cell_ab(18)" | parents: 1 | children: 0 | isTopLevel: false
+"x_line_zuo" | parents: 1 | children: 0 | isTopLevel: false
+"cell_ab(23)" | parents: 1 | children: 0 | isTopLevel: false
+"cell_ab(5)" | parents: 1 | children: 0 | isTopLevel: false
+"top_cell(2)" | parents: 3 | children: 0 | isTopLevel: false
+"Res_bansui_1_ab_base_$1" | parents: 1 | children: 2 | isTopLevel: false
+"z_line_ouhe_wujj_youxia" | parents: 1 | children: 0 | isTopLevel: false
+"grid_cell_Flip(1)" | parents: 1 | children: 0 | isTopLevel: false
+"top_cell2" | parents: 1 | children: 0 | isTopLevel: false
+"cell_ab(4)" | parents: 1 | children: 0 | isTopLevel: false
+"via" | parents: 1 | children: 0 | isTopLevel: false
+"top_cell2$1" | parents: 1 | children: 0 | isTopLevel: false
+"cell_ab(11)" | parents: 1 | children: 0 | isTopLevel: false
+"cell_ab(12)" | parents: 1 | children: 0 | isTopLevel: false
+"QGD-flip" | parents: 1 | children: 7 | isTopLevel: false
+"tinpad&inpillar(5)" | parents: 1 | children: 0 | isTopLevel: false
+"bit-biaoshi" | parents: 1 | children: 0 | isTopLevel: false
+"grid_cell_Base(2)(1)" | parents: 1 | children: 0 | isTopLevel: false
+"Linktest_AB" | parents: 1 | children: 0 | isTopLevel: false
+"Singlebit_V8_2(1)" | parents: 1 | children: 2 | isTopLevel: false
+"cell_ab(19)" | parents: 1 | children: 0 | isTopLevel: false
+"z_line_ouhe_zuoxia" | parents: 1 | children: 1 | isTopLevel: false
+"JJTest_teststructure" | parents: 1 | children: 1 | isTopLevel: false
+"z_line_ouhe_youxia" | parents: 1 | children: 1 | isTopLevel: false
+"res_ti_huan(zhihou)" | parents: 1 | children: 3 | isTopLevel: false
+"cell_ab(26)" | parents: 1 | children: 0 | isTopLevel: false
+"tinpad-wgd(1)" | parents: 1 | children: 0 | isTopLevel: false
+"TiNPad&Inpillar(3)" | parents: 1 | children: 1 | isTopLevel: false
+"grid_cell_Flip_2(1)" | parents: 1 | children: 0 | isTopLevel: false
+"AB" | parents: 1 | children: 0 | isTopLevel: false
+"grid_cell_Flip(1)$1" | parents: 1 | children: 0 | isTopLevel: false
+"Res_bansui_1_base_" | parents: 1 | children: 1 | isTopLevel: false
+"kongqiqiao(1)" | parents: 1 | children: 0 | isTopLevel: false
+"tinpad&inpillar(1)" | parents: 1 | children: 0 | isTopLevel: false
+"wbpad" | parents: 1 | children: 0 | isTopLevel: false
+"cell_ab(14)" | parents: 1 | children: 0 | isTopLevel: false
+"x_line_you" | parents: 1 | children: 0 | isTopLevel: false
+"Res_bansui_1_ab_Flip_$1" | parents: 0 | children: 1 | isTopLevel: true
+"Marker_positive" | parents: 1 | children: 0 | isTopLevel: false
+"Stepper_marker(3)$2$1" | parents: 1 | children: 0 | isTopLevel: false
+"Singlebit_V8_2(1)$1" | parents: 1 | children: 2 | isTopLevel: false
+"tinpad&inpillar(6)" | parents: 1 | children: 0 | isTopLevel: false
+"cell_ab" | parents: 1 | children: 0 | isTopLevel: false
+"Res_bansui_1_ab_Flip_" | parents: 1 | children: 1 | isTopLevel: false
+"tinpad-wgd" | parents: 1 | children: 0 | isTopLevel: false
+"cell_ab(9)" | parents: 1 | children: 0 | isTopLevel: false
+"Stepper_marker(3)" | parents: 1 | children: 0 | isTopLevel: false
+"Linktest_AB$1" | parents: 1 | children: 0 | isTopLevel: false
+"wbpad(1)" | parents: 1 | children: 0 | isTopLevel: false
+"topcell000111" | parents: 0 | children: 66 | isTopLevel: true
+"cell_ab(24)" | parents: 1 | children: 0 | isTopLevel: false
+"Stepper_marker(3)$2" | parents: 1 | children: 0 | isTopLevel: false
+"cell_ab(16)" | parents: 1 | children: 0 | isTopLevel: false
+"cell_ab(20)" | parents: 1 | children: 0 | isTopLevel: false
+"Singlebit_V8_2_GRID_ARRAY(1)$1" | parents: 0 | children: 2 | isTopLevel: true
+"cell_ab(27)" | parents: 1 | children: 0 | isTopLevel: false
+"tinpad&inpillar(4)" | parents: 1 | children: 0 | isTopLevel: false
+"Marker_Flip_Base(1)" | parents: 1 | children: 0 | isTopLevel: false
+"Res_bansui_1_base_(2)" | parents: 1 | children: 1 | isTopLevel: false
+"Stepper_marker(2)(1)" | parents: 1 | children: 0 | isTopLevel: false
+"TiNPad&Inpillar" | parents: 1 | children: 1 | isTopLevel: false
+"cell_ab(13)" | parents: 1 | children: 0 | isTopLevel: false
+"tinpad&inpillar" | parents: 1 | children: 0 | isTopLevel: false
+"AB$1" | parents: 1 | children: 0 | isTopLevel: false
+"Stepper_marker(3)$4" | parents: 1 | children: 0 | isTopLevel: false
+"Singlebit_V8_2_GRID_ARRAY(1)" | parents: 1 | children: 2 | isTopLevel: false
+"x_line_shang" | parents: 1 | children: 0 | isTopLevel: false
+"res_ti_huan(zhihou)(1)" | parents: 1 | children: 0 | isTopLevel: false
+"cell_ab(21)" | parents: 1 | children: 0 | isTopLevel: false
+"Stepper_marker(3)$3" | parents: 1 | children: 0 | isTopLevel: false
+"Line-Maker" | parents: 1 | children: 1 | isTopLevel: false
+"tinpad&inpillar(2)" | parents: 1 | children: 0 | isTopLevel: false
+"test_JJ(1)" | parents: 1 | children: 1 | isTopLevel: false
+"Stepper_marker(1)(1)" | parents: 1 | children: 0 | isTopLevel: false
+"cell_ab(6)" | parents: 1 | children: 0 | isTopLevel: false
+================================
+========================================
+=== 渲染统计 ===
+当前结构: "top_cell2"
+BOUNDARY 数量: 13
+PATH 数量: 0
+TEXT 数量: 0
+========================================
+=== 渲染完成 ===
+四叉树: 禁用
+Boundary: 渲染 13 / 13
+Path: 渲染 0 / 0
+Text: 渲染 0 / 0
+总耗时: 4 ms
+=== 渲染完成 ===
+四叉树: 禁用
+Boundary: 渲染 15 / 15494
+Path: 渲染 3 / 3
+Text: 渲染 58 / 58
+总耗时: 25 ms
+=== 渲染完成 ===
+四叉树: 禁用
+Boundary: 渲染 15 / 15494
+Path: 渲染 3 / 3
+Text: 渲染 58 / 58
+总耗时: 28 ms
+=== 渲染完成 ===
+四叉树: 禁用
+Boundary: 渲染 15 / 15494
+Path: 渲染 3 / 3
+Text: 渲染 58 / 58
+总耗时: 26 ms
+=== 渲染完成 ===
+四叉树: 禁用
+Boundary: 渲染 15 / 15494
+Path: 渲染 3 / 3
+Text: 渲染 58 / 58
+总耗时: 25 ms
+=== 渲染完成 ===
+四叉树: 禁用
+Boundary: 渲染 15 / 15494
+Path: 渲染 3 / 3
+Text: 渲染 58 / 58
+总耗时: 26 ms
+=== 渲染完成 ===
+四叉树: 禁用
+Boundary: 渲染 8 / 15494
+Path: 渲染 3 / 3
+Text: 渲染 58 / 58
+总耗时: 24 ms
+=== 渲染完成 ===
+四叉树: 禁用
+Boundary: 渲染 7 / 15494
+Path: 渲染 3 / 3
+Text: 渲染 58 / 58
+总耗时: 26 ms
+=== 渲染完成 ===
+四叉树: 启用
+Boundary: 渲染 13 / 15494
+Path: 渲染 3 / 3
+Text: 渲染 58 / 58
+总耗时: 12 ms
+=== 渲染完成 ===
+四叉树: 启用
+Boundary: 渲染 13 / 15494
+Path: 渲染 3 / 3
+Text: 渲染 58 / 58
+总耗时: 12 ms
+=== 渲染完成 ===
+四叉树: 启用
+Boundary: 渲染 13 / 15494
+Path: 渲染 3 / 3
+Text: 渲染 58 / 58
+总耗时: 12 ms
+=== 渲染完成 ===
+四叉树: 启用
+Boundary: 渲染 13 / 15494
+Path: 渲染 3 / 3
+Text: 渲染 58 / 58
+总耗时: 12 ms
+=== 渲染完成 ===
+四叉树: 启用
+Boundary: 渲染 13 / 15494
+Path: 渲染 3 / 3
+Text: 渲染 58 / 58
+总耗时: 12 ms
+=== 渲染完成 ===
+四叉树: 启用
+Boundary: 渲染 13 / 15494
+Path: 渲染 3 / 3
+Text: 渲染 58 / 58
+总耗时: 12 ms
+=== 渲染完成 ===
+四叉树: 启用
+Boundary: 渲染 13 / 15494
+Path: 渲染 3 / 3
+Text: 渲染 58 / 58
+总耗时: 12 ms
+=== 渲染完成 ===
+四叉树: 禁用
+Boundary: 渲染 7 / 15494
+Path: 渲染 3 / 3
+Text: 渲染 58 / 58
+总耗时: 24 ms
+=== 渲染完成 ===
+四叉树: 禁用
+Boundary: 渲染 8 / 15494
+Path: 渲染 3 / 3
+Text: 渲染 58 / 58
+总耗时: 25 ms
+=== 渲染完成 ===
+四叉树: 禁用
+Boundary: 渲染 15 / 15494
+Path: 渲染 3 / 3
+Text: 渲染 58 / 58
+总耗时: 24 ms
+=== 渲染完成 ===
+四叉树: 禁用
+Boundary: 渲染 21 / 15494
+Path: 渲染 3 / 3
+Text: 渲染 58 / 58
+总耗时: 25 ms
+=== 渲染完成 ===
+四叉树: 禁用
+Boundary: 渲染 47 / 15494
+Path: 渲染 3 / 3
+Text: 渲染 58 / 58
+总耗时: 26 ms
+=== 渲染完成 ===
+四叉树: 禁用
+Boundary: 渲染 88 / 15494
+Path: 渲染 3 / 3
+Text: 渲染 58 / 58
+总耗时: 28 ms

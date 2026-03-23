@@ -1,0 +1,99 @@
+name: Bug Report
+description: 报告一个问题
+title: '[BUG] '
+labels: [type/bug]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 感谢您报告问题！
+        请填写以下信息帮助我们快速定位问题。
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 简要描述遇到的问题
+      placeholder: "打开文件后程序崩溃..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 详细描述如何复现这个问题
+      placeholder: |
+        1. 打开程序
+        2. 选择文件 '...'
+        3. 点击 '...'
+        4. 看到错误
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+      description: 您期望发生什么
+      placeholder: "程序应该正常显示图形..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 实际发生了什么
+      placeholder: "程序崩溃/显示异常..."
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图
+      description: 如有截图请附上
+      placeholder: "拖拽图片到此处"
+
+  - type: input
+    id: os
+    attributes:
+      label: 操作系统
+      description: 您的操作系统
+      placeholder: "Windows 10 / Windows 11 / Linux / macOS"
+    validations:
+      required: true
+
+  - type: input
+    id: qt-version
+    attributes:
+      label: Qt 版本
+      description: Qt 版本号
+      placeholder: "5.15.2"
+
+  - type: input
+    id: file-size
+    attributes:
+      label: GDS 文件大小
+      description: 测试文件大小
+      placeholder: "130 MB"
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: 相关模块
+      description: 问题出在哪个模块
+      options:
+        - 未确定
+        - GDS 解析
+        - 渲染引擎
+        - UI 界面
+        - 其他
+      default: 0
+
+  - type: input
+    id: related-issue
+    attributes:
+      label: 关联 Issue/PR
+      description: 相关的 Issue 或 PR 编号
+      placeholder: "#123"

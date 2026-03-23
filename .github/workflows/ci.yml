@@ -1,0 +1,190 @@
+name: QLayoutEDA CI/CD
+
+on:
+  push:
+    branches: [ main, develop, 'feature/**' ]
+  pull_request:
+    branches: [ main, develop ]
+  issues:
+    types: [ opened, labeled, assigned ]
+
+env:
+  QT_VERSION: '5.15.2'
+
+jobs:
+  # ═════════════════════════════════════════════════════
+  # Job 1: 代码检查
+  # ═════════════════════════════════════════════════════
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Check Code Format
+        run: |
+          echo "Checking code format..."
+          # 可添加 clang-format 检查
+
+  # ═════════════════════════════════════════════════════
+  # Job 2: 构建
+  # ═════════════════════════════════════════════════════
+  build:
+    needs: lint
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: ${{ env.QT_VERSION }}
+          arch: win64_msvc2019_64
+          
+      - name: Configure CMake
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+        
+      - name: Build
+        run: cmake --build build --config Release
+        
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: QLayoutEDA
+          path: build/Release/QLayoutEDA.exe
+
+  # ═════════════════════════════════════════════════════
+  # Job 3: 测试
+  # ═════════════════════════════════════════════════════
+  test:
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: ${{ env.QT_VERSION }}
+          
+      - name: Build Tests
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON
+          cmake --build build --config Release
+          
+      - name: Run Tests
+        run: |
+          cd build
+          ctest -C Release --output-on-failure
+
+  # ═════════════════════════════════════════════════════
+  # Job 4: 自动合并
+  # ═════════════════════════════════════════════════════
+  auto-merge:
+    needs: test
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auto Merge PR
+        uses: pascalgn/automerge-action@v0.15.6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MERGE_LABELS: ""
+          MERGE_METHOD: squash
+          MERGE_COMMIT_MESSAGE: "auto: merge PR #{pullRequest.number}"
+
+  # ═════════════════════════════════════════════════════
+  # Job 5: Issue 分发给智能体
+  # ═════════════════════════════════════════════════════
+  dispatch-to-agent:
+    if: github.event_name == 'issues' && github.event.action == 'opened'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get Agent by Label
+        id: agent
+        run: |
+          LABEL="${{ github.event.issue.labels[0].name }}"
+          case "$LABEL" in
+            module/parser)
+              echo "agent=eda_gds_parser" >> $GITHUB_OUTPUT
+              ;;
+            module/graphic)
+              echo "agent=eda_graphic_algo" >> $GITHUB_OUTPUT
+              ;;
+            module/ui)
+              echo "agent=eda_qt_dev" >> $GITHUB_OUTPUT
+              ;;
+            module/test)
+              echo "agent=eda_tester" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "agent=eda_architect" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+      - name: Comment on Issue
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🤖 **智能体认领**\n\n我是 `${{ steps.agent.outputs.agent }}`，我来处理这个任务。\n\n---\n*自动分配 by GitHub Actions*'
+            })
+
+      - name: Assign to Agent
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.addAssignees({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              assignees: ['QLayoutEDA-Bot']
+            })
+
+      - name: Dispatch to OpenClaw
+        if: secrets.OPENCLAW_WEBHOOK_URL != ''
+        run: |
+          curl -X POST "${{ secrets.OPENCLAW_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -H "X-GitHub-Event: issues" \
+            -d '{
+              "action": "opened",
+              "issue": {
+                "number": ${{ github.event.issue.number }},
+                "title": "${{ github.event.issue.title }}",
+                "body": "${{ github.event.issue.body }}",
+                "html_url": "${{ github.event.issue.html_url }}"
+              },
+              "agent": "${{ steps.agent.outputs.agent }}"
+            }'
+
+  # ═════════════════════════════════════════════════════
+  # Job 6: 发布版本
+  # ═════════════════════════════════════════════════════
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: ${{ env.QT_VERSION }}
+          arch: win64_msvc2019_64
+          
+      - name: Build Release
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release
+          
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/Release/QLayoutEDA.exe
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

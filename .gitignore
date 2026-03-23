@@ -1,0 +1,77 @@
+# Build directories
+build/
+cmake-build-*/
+out/
+
+# Qt generated files
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*.autosave
+
+# Compiled files
+*.obj
+*.o
+*.exe
+*.dll
+*.lib
+*.a
+*.so
+*.dylib
+
+# IDE files
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.sln.docstates
+*.vcxproj.user
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Mac
+.DS_Store
+*.xcworkspace/
+*.xcuserdata/
+
+# Test outputs
+Testing/
+CTestTestfile.cmake
+
+# Backup files
+*~
+*.bak
+*.backup
+*.old
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Package files
+*.zip
+*.tar.gz
+*.7z
+
+# Local config
+local.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+ENV/
+
+# Node (if any)
+node_modules/
+npm-debug.log

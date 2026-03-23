@@ -1,0 +1,16 @@
+# Dependabot 配置
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuring-dependabot-version-updates
+
+version: 2
+updates:
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "QLayoutEDA-Bot"
+    labels:
+      - "type/enhancement"
+      - "dependencies"

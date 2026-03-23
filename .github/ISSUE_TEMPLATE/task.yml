@@ -1,0 +1,115 @@
+name: Development Task
+description: 开发任务分配
+title: '[TASK] '
+labels: [type/task]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 开发任务
+        此模板用于分配开发任务给智能体团队。
+
+  - type: input
+    id: title
+    attributes:
+      label: 任务标题
+      description: 一句话描述任务
+      placeholder: "实现 Cell 缓存机制"
+    validations:
+      required: true
+
+  - type: textarea
+    id: background
+    attributes:
+      label: 任务背景
+      description: 为什么需要这个任务
+      placeholder: "当前渲染 100 万 SREF 需要 21 秒，需要优化..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: requirements
+    attributes:
+      label: 详细要求
+      description: 具体需要实现的功能点
+      placeholder: |
+        - [ ] 要求 1：实现 LRU 缓存淘汰策略
+        - [ ] 要求 2：支持缩放容差匹配
+        - [ ] 要求 3：内存占用不超过 200MB
+    validations:
+      required: true
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: 目标模块
+      description: 任务属于哪个模块
+      options:
+        - GDS 解析
+        - 渲染引擎
+        - UI 界面
+        - 测试
+        - 文档
+      default: 1
+
+  - type: dropdown
+    id: assignee
+    attributes:
+      label: 负责智能体
+      description: 分配给哪个智能体
+      options:
+        - eda_architect
+        - eda_gds_parser
+        - eda_graphic_algo
+        - eda_qt_dev
+        - eda_tester
+        - eda_pm
+      default: 2
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 优先级
+      description: 任务优先级
+      options:
+        - P0 - 紧急
+        - P1 - 高
+        - P2 - 中
+        - P3 - 低
+      default: 1
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      description: 完成标准
+      placeholder: |
+        - [ ] 单元测试通过
+        - [ ] 渲染时间 < 1 秒
+        - [ ] 代码审查通过
+    validations:
+      required: true
+
+  - type: input
+    id: deadline
+    attributes:
+      label: 截止时间
+      description: 预计完成时间
+      placeholder: "YYYY-MM-DD"
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: 依赖任务
+      description: 是否依赖其他任务
+      placeholder: "依赖 #123 完成"
+
+  - type: textarea
+    id: reference
+    attributes:
+      label: 参考资料
+      description: 相关设计文档、参考代码等
+      placeholder: |
+        - docs/KLayout_Render_Analysis.md
+        - https://github.com/KLayout/klayout

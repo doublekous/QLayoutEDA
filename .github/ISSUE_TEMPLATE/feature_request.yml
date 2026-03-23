@@ -1,0 +1,82 @@
+name: Feature Request
+description: 提出新功能需求
+title: '[FEATURE] '
+labels: [type/feature]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 功能需求
+        请详细描述您需要的功能。
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 功能描述
+      description: 清晰描述想要的功能
+      placeholder: "希望能够..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: user-story
+    attributes:
+      label: 用户场景
+      description: 描述用户故事
+      placeholder: |
+        作为 [用户角色]，我希望 [功能]，以便 [目的]。
+        
+        例如：
+        作为 IC 设计工程师，我希望能够快速测量两个图形之间的距离，以便验证设计规则。
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: 期望方案
+      description: 描述期望的实现方式
+      placeholder: |
+        1. 在工具栏添加测量按钮
+        2. 点击后选择两个点
+        3. 显示距离信息
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 替代方案
+      description: 其他可能的实现方式
+      placeholder: "或者可以使用..."
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: 目标模块
+      description: 这个功能属于哪个模块
+      options:
+        - 未确定
+        - GDS 解析
+        - 渲染引擎
+        - UI 界面
+        - 测试
+        - 文档
+      default: 0
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 优先级
+      description: 您认为的优先级
+      options:
+        - 低
+        - 中
+        - 高
+      default: 1
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: 附加信息
+      description: 其他相关信息或截图
+      placeholder: "参考 KLayout 的实现方式..."

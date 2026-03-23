@@ -1,0 +1,26 @@
+# CODEOWNERS - 代码所有者配置
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# 架构师审查所有代码变更
+* @QLayoutEDA-Bot
+
+# GDS 解析模块 - eda_gds_parser
+/src/parser/ @QLayoutEDA-Bot
+
+# 图形算法模块 - eda_graphic_algo
+/src/graphic/ @QLayoutEDA-Bot
+
+# UI 模块 - eda_qt_dev
+/src/ui/ @QLayoutEDA-Bot
+
+# 测试模块 - eda_tester
+/tests/ @QLayoutEDA-Bot
+/src/test/ @QLayoutEDA-Bot
+
+# 文档 - eda_pm
+/docs/ @QLayoutEDA-Bot
+/README.md @QLayoutEDA-Bot
+/CHANGELOG.md @QLayoutEDA-Bot
+
+# CI/CD 配置
+/.github/workflows/ @QLayoutEDA-Bot
