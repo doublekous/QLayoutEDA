@@ -1,92 +1,70 @@
 /**
  * @file SelectionEngine.h
- * @brief 图形选择引擎
+ * @brief 选择引擎 - 处理图形的选择操作
+ * 
+ * Issue #7: Shape Selection and Move Functionality
+ * Author: eda_graphic_algo
  */
 
-#pragma once
+#ifndef SELECTION_ENGINE_H
+#define SELECTION_ENGINE_H
 
-#include "core/Types.h"
-#include "QuadTree.h"
 #include <QObject>
-#include <QSet>
 #include <QPointF>
 #include <QRectF>
+#include <QVector>
+#include <QSet>
+#include <memory>
+
+// 前向声明
+namespace QLayoutEDA {
+    class GDSData;
+}
 
 namespace QLayoutEDA {
 
-class GDSData;
-struct GDSBoundary;
-struct GDSPath;
-struct GDSText;
-
 /**
- * @brief 对象ID - 用于唯一标识图形对象
+ * @brief 对象唯一标识符
  */
 struct ObjectId {
-    enum Type : quint8 {
-        Boundary = 0,
-        Path = 1,
-        Text = 2,
-        SREF = 3,
-        AREF = 4
-    };
-    
-    Type type;              ///< 对象类型
-    quint32 index;          ///< 在数组中的索引
-    QString structureName;  ///< 所属结构名
-    
-    ObjectId() : type(Boundary), index(0) {}
-    ObjectId(Type t, quint32 idx, const QString& name = QString())
-        : type(t), index(idx), structureName(name) {}
+    QString structureName;  // 所属 Cell 名称
+    int layer;              // 层号
+    int index;              // 在该层中的索引
+    enum Type { Boundary, Path, SREF, AREF } type;
     
     bool operator==(const ObjectId& other) const {
-        return type == other.type && index == other.index && structureName == other.structureName;
-    }
-    
-    bool operator!=(const ObjectId& other) const {
-        return !(*this == other);
+        return structureName == other.structureName &&
+               layer == other.layer &&
+               index == other.index &&
+               type == other.type;
     }
     
     bool operator<(const ObjectId& other) const {
-        if (type != other.type) return type < other.type;
+        if (structureName != other.structureName) return structureName < other.structureName;
+        if (layer != other.layer) return layer < other.layer;
         if (index != other.index) return index < other.index;
-        return structureName < other.structureName;
+        return type < other.type;
     }
 };
 
 /**
- * @brief 选中对象（兼容旧接口）
+ * @brief 选中的对象
  */
 struct SelectedObject {
-    enum Type {
-        Boundary,
-        Path,
-        Text,
-        SREF,
-        AREF
-    };
-    
-    Type type;
-    quint32 index;          ///< 在数组中的索引
-    QString structureName;  ///< 所属结构
+    ObjectId id;
+    QString structureName;
     int layer;
+    int index;
+    enum ObjectType { Boundary, Path, SREF, AREF } objectType;
     
     bool operator==(const SelectedObject& other) const {
-        return type == other.type && index == other.index && structureName == other.structureName;
+        return id == other.id;
     }
     
-    // 从 ObjectId 转换
-    static SelectedObject fromObjectId(const ObjectId& id) {
-        SelectedObject obj;
-        obj.type = static_cast<Type>(id.type);
-        obj.index = id.index;
-        obj.structureName = id.structureName;
-        obj.layer = 0;
-        return obj;
-    }
-    
-    ObjectId toObjectId() const {
-        return ObjectId(static_cast<ObjectId::Type>(type), index, structureName);
+    uint qHash(const SelectedObject& obj, uint seed = 0) {
+        return qHash(obj.id.structureName, seed) ^ 
+               qHash(obj.id.layer, seed) ^ 
+               qHash(obj.id.index, seed);
     }
 };
 
@@ -94,58 +72,72 @@ struct SelectedObject {
  * @brief 选择结果
  */
 struct SelectionResult {
-    QSet<SelectedObject> objects;
-    bool isEmpty() const { return objects.isEmpty(); }
-    int count() const { return objects.size(); }
+    QVector<ObjectId> selectedIds;
+    int count() const { return selectedIds.size(); }
+    bool isEmpty() const { return selectedIds.isEmpty(); }
+    void clear() { selectedIds.clear(); }
 };
 
 /**
- * @brief 图形选择引擎
+ * @brief 选择引擎类
  * 
- * 支持：
- * - 点选（Point Selection）
- * - 框选（Rect Selection）
- * - 图层过滤
- * - 容差控制
+ * 负责处理图形的选择操作，包括点选、框选、全选等功能。
  */
 class SelectionEngine : public QObject {
     Q_OBJECT
-    
+
 public:
     explicit SelectionEngine(QObject* parent = nullptr);
     ~SelectionEngine() override = default;
-    
-    /**
-     * @brief 设置数据源
-     */
-    void setDataSource(GDSDataPtr data);
-    
-    /**
-     * @brief 设置空间索引
-     */
-    void setSpatialIndex(QuadTree* index);
-    
-    /**
-     * @brief 设置选择容差（像素）
-     */
-    void setTolerance(double pixels);
+
+    // 数据源设置
+    void setDataSource(std::shared_ptr<GDSData> data);
+    std::shared_ptr<GDSData> dataSource() const { return m_data; }
+
+    // 容差设置
+    void setTolerance(double tolerance);
     double tolerance() const { return m_tolerance; }
+
+    // ============================================================
+    // 选择操作
+    // ============================================================
     
     /**
-     * @brief 点选
-     * @param worldPoint 世界坐标点
-     * @param addToSelection 是否添加到现有选择
-     * @return 选择结果
+     * @brief 点选操作
+     * @param worldPos 世界坐标位置
+     * @param tolerance 选择容差（屏幕像素）
+     * @return 选中的对象ID列表
      */
-    SelectionResult pickPointWithSelection(const QPointF& worldPoint, bool addToSelection);
+    QVector<ObjectId> pickPoint(const QPointF& worldPos, double tolerance = -1);
     
     /**
-     * @brief 框选
+     * @brief 框选操作
      * @param worldRect 世界坐标矩形
-     * @param addToSelection 是否添加到现有选择
+     * @return 选中的对象ID列表
+     */
+    QVector<ObjectId> pickRect(const QRectF& worldRect);
+    
+    /**
+     * @brief 全选操作
      * @return 选择结果
      */
-    SelectionResult pickRectWithSelection(const QRectF& worldRect, bool addToSelection);
+    SelectionResult selectAll();
+    
+    /**
+     * @brief 添加到当前选择
+     * @param ids 要添加的对象ID
+     */
+    void addToSelection(const QVector<ObjectId>& ids);
+    
+    /**
+     * @brief 从当前选择移除
+     * @param ids 要移除的对象ID
+     */
+    void removeFromSelection(const QVector<ObjectId>& ids);
+
+    // ============================================================
+    // 选择管理
+    // ============================================================
     
     /**
      * @brief 清除选择
@@ -153,114 +145,72 @@ public:
     void clearSelection();
     
     /**
-     * @brief 获取当前选择
+     * @brief 反选
+     * @return 新的选择结果
      */
-    const QSet<SelectedObject>& currentSelection() const { return m_currentSelection; }
+    SelectionResult invertSelection();
     
     /**
-     * @brief 按图层过滤选择
+     * @brief 按层过滤选择
+     * @param layer 层号
+     * @return 过滤后的对象集合
      */
-    QSet<SelectedObject> filterByLayer(int layer) const;
+    QSet<SelectedObject> filterByLayer(int layer);
     
     /**
      * @brief 按类型过滤选择
+     * @param type 对象类型
+     * @return 过滤后的对象集合
      */
-    QSet<SelectedObject> filterByType(SelectedObject::Type type) const;
+    QSet<SelectedObject> filterByType(SelectedObject::ObjectType type);
     
     /**
      * @brief 获取选中数量
      */
-    int selectedCount() const { return m_currentSelection.size(); }
+    int selectedCount() const { return m_selectedObjects.size(); }
     
     /**
-     * @brief 是否有选择
+     * @brief 是否有选中对象
      */
-    bool hasSelection() const { return !m_currentSelection.isEmpty(); }
+    bool hasSelection() const { return !m_selectedObjects.isEmpty(); }
     
     /**
-     * @brief 选择全部
+     * @brief 获取所有选中对象
      */
-    SelectionResult selectAll();
-    
-    /**
-     * @brief 反选
-     */
-    SelectionResult invertSelection();
-    
-    //=========================================================================
-    // 简化接口（任务要求）
-    //=========================================================================
-    
-    /**
-     * @brief 点选 - 查找最近的图形
-     * @param pos 世界坐标点
-     * @param tolerance 容差（微米）
-     * @return 选中的对象ID列表
-     */
-    QVector<ObjectId> pickPoint(const QPointF& pos, double tolerance);
-    
-    /**
-     * @brief 框选 - 查询范围内的图形
-     * @param rect 世界坐标矩形
-     * @return 选中的对象ID列表
-     */
-    QVector<ObjectId> pickRect(const QRectF& rect);
-    
-    /**
-     * @brief 选择指定结构的全部图形
-     * @param structureName 结构名
-     * @return 选中的对象ID列表
-     */
-    QVector<ObjectId> selectAll(const QString& structureName);
-    
+    QSet<SelectedObject> selectedObjects() const { return m_selectedObjects; }
+
 signals:
     /**
-     * @brief 选择改变信号
+     * @brief 选择变化信号
      */
-    void selectionChanged(const QSet<SelectedObject>& selection);
+    void selectionChanged();
     
+    /**
+     * @brief 选择完成信号
+     * @param count 选中数量
+     */
+    void selectionCompleted(int count);
+
 private:
-    /**
-     * @brief 测试点是否在多边形内
-     */
-    bool pointInPolygon(const QPointF& point, const QVector<DbPoint>& polygon) const;
-    
-    /**
-     * @brief 测试点是否在路径附近
-     */
-    bool pointNearPath(const QPointF& point, const GDSPath& path, double tolerance) const;
-    
-    /**
-     * @brief 测试矩形是否与多边形相交
-     */
-    bool rectIntersectsPolygon(const QRectF& rect, const QVector<DbPoint>& polygon) const;
-    
-    /**
-     * @brief 获取 Boundary 的边界框
-     */
-    QRectF getBoundaryBounds(const GDSBoundary& boundary) const;
-    
-    /**
-     * @brief 获取 Path 的边界框
-     */
-    QRectF getPathBounds(const GDSPath& path) const;
-    
-    GDSDataPtr m_data;
-    QuadTree* m_spatialIndex = nullptr;
-    
-    double m_tolerance = 5.0;  // 默认 5 像素容差
-    QString m_currentStructure;
-    
-    QSet<SelectedObject> m_currentSelection;
+    // 内部辅助方法
+    bool isPointInsideBoundary(const QPointF& point, const ObjectId& id);
+    bool isRectIntersectBoundary(const QRectF& rect, const ObjectId& id);
+    ObjectId createObjectId(const QString& structureName, int layer, int index, ObjectId::Type type);
+
+private:
+    std::shared_ptr<GDSData> m_data;
+    double m_tolerance = 5.0;
+    QSet<SelectedObject> m_selectedObjects;
+    bool m_addToExistingSelection = false;
 };
 
 } // namespace QLayoutEDA
 
-// qHash 实现
-inline uint qHash(const QLayoutEDA::ObjectId& obj, uint seed = 0) {
-    return qHash(static_cast<quint8>(obj.type), seed) ^ qHash(obj.index, seed) ^ qHash(obj.structureName, seed);
+// 使 SelectedObject 可用于 QSet
+inline uint qHash(const QLayoutEDA::SelectedObject& obj, uint seed = 0) {
+    return qHash(obj.id.structureName, seed) ^ 
+           qHash(obj.id.layer, seed) ^ 
+           qHash(obj.id.index, seed);
 }
 
-inline uint qHash(const QLayoutEDA::SelectedObject& obj, uint seed = 0) {
-    return qHash(obj.type, seed) ^ qHash(obj.index, seed) ^ qHash(obj.structureName, seed);
-}
+#endif // SELECTION_ENGINE_H
