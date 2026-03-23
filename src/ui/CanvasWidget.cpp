@@ -375,6 +375,42 @@ void CanvasWidget::clearSelection()
     }
 }
 
+void CanvasWidget::moveSelectedObjects(const QPointF& delta)
+{
+    if (!m_gdsData || m_selectedObjects.isEmpty()) return;
+    
+    // 遍历所有选中对象并移动
+    for (const auto& obj : m_selectedObjects) {
+        auto structure = m_gdsData->getStructure(obj.structureName);
+        if (!structure) continue;
+        
+        // 根据对象类型移动
+        if (obj.objectType == 0 && obj.index < structure->boundaries.size()) {
+            // 移动边界点
+            auto& boundary = structure->boundaries[obj.index];
+            for (auto& pt : boundary.points) {
+                pt.x += static_cast<Coord>(delta.x());
+                pt.y += static_cast<Coord>(delta.y());
+            }
+        } else if (obj.objectType == 1 && obj.index < structure->paths.size()) {
+            // 移动路径点
+            auto& path = structure->paths[obj.index];
+            for (auto& pt : path.points) {
+                pt.x += static_cast<Coord>(delta.x());
+                pt.y += static_cast<Coord>(delta.y());
+            }
+        } else if (obj.objectType == 2 && obj.index < structure->texts.size()) {
+            // 移动文本位置
+            auto& text = structure->texts[obj.index];
+            text.position.x += static_cast<Coord>(delta.x());
+            text.position.y += static_cast<Coord>(delta.y());
+        }
+    }
+    
+    // 标记需要重绘
+    m_imageCache.clear();
+}
+
 //=============================================================================
 // 坐标转换
 //=============================================================================
@@ -1036,6 +1072,25 @@ void CanvasWidget::mousePressEvent(QMouseEvent* event)
     m_lastMousePos = event->pos();
     m_lastWorldPos = screenToWorld(event->pos());
     
+    // 检查是否点击了选中对象（用于移动）
+    if (m_currentTool == Tool::Select && event->button() == Qt::LeftButton && !m_selectedObjects.isEmpty()) {
+        QPointF dbPos = screenToDatabase(event->pos());
+        
+        // 检查点击位置是否有选中对象
+        for (const auto& obj : m_selectedObjects) {
+            QRectF bounds = getObjectBounds(obj);
+            if (!bounds.isNull() && bounds.contains(dbPos)) {
+                // 开始拖动移动
+                m_isDragging = true;
+                m_dragStartPos = dbPos;
+                m_dragObjects = m_selectedObjects;
+                setCursor(Qt::SizeAllCursor);
+                emit statusMessage(tr("Dragging %1 objects").arg(m_dragObjects.size()));
+                return;
+            }
+        }
+    }
+    
     switch (m_currentTool) {
     case Tool::Select:
         handleSelectPress(m_lastWorldPos, event->button(), event->modifiers());
@@ -1053,6 +1108,19 @@ void CanvasWidget::mouseMoveEvent(QMouseEvent* event)
 {
     QPointF worldPos = screenToWorld(event->pos());
     updateCoordinateDisplay(worldPos);
+    
+    // 拖动移动处理
+    if (m_isDragging) {
+        QPointF dbPos = screenToDatabase(event->pos());
+        QPointF delta = dbPos - m_dragStartPos;
+        
+        // 移动所有选中对象
+        moveSelectedObjects(delta);
+        
+        m_dragStartPos = dbPos;
+        update();
+        return;
+    }
     
     // 平移处理
     if (m_isPanning || (m_mousePressed && m_currentTool == Tool::Pan) || m_spacePressed) {
@@ -1094,6 +1162,18 @@ void CanvasWidget::mouseMoveEvent(QMouseEvent* event)
 void CanvasWidget::mouseReleaseEvent(QMouseEvent* event)
 {
     m_mousePressed = false;
+    
+    // 完成拖动移动
+    if (m_isDragging) {
+        m_isDragging = false;
+        m_dragObjects.clear();
+        setCursor(Qt::ArrowCursor);
+        emit statusMessage(tr("Move completed"));
+        // 清除图像缓存以显示更新
+        m_imageCache.clear();
+        update();
+        return;
+    }
     
     if (m_isPanning) {
         m_isPanning = false;

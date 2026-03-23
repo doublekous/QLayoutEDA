@@ -101,6 +101,9 @@ public:
     QSet<SelectedObject> getSelectedObjects() const { return m_selectedObjects; }
     bool hasSelection() const { return !m_selectedObjects.isEmpty(); }
     int selectionCount() const { return m_selectedObjects.size(); }
+    
+    // 移动操作
+    void moveSelectedObjects(const QPointF& delta);
 
 signals:
     /**
@@ -243,6 +246,12 @@ private:
     bool m_rubberBandActive = false;
     QPointF m_rubberBandStart;
     QPointF m_rubberBandEnd;
+    
+    // 移动状态
+    bool m_isDragging = false;           ///< 是否正在拖动移动
+    QPointF m_dragStartPos;              ///< 拖动起始位置（数据库坐标）
+    QSet<SelectedObject> m_dragObjects;  ///< 正在拖动的对象
+    QVector<QPointF> m_dragOriginalPositions; ///< 原始位置（用于撤销）
     
     // 绘制状态
     QVector<QPointF> m_drawPoints;      ///< 绘制点集合
