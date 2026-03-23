@@ -49,6 +49,7 @@ add_library(graphic_module STATIC
     src/graphic/QuadTree.cpp
     src/graphic/RenderCoordinator.cpp
     src/graphic/CellRenderCache.cpp
+    src/graphic/SelectionEngine.cpp
 )
 target_link_libraries(graphic_module parser_module Qt5::Core Qt5::Gui Qt5::Widgets Qt5::Concurrent)
 
