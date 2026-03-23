@@ -1,534 +1,159 @@
 /**
  * @file SelectionEngine.cpp
- * @brief 图形选择引擎实现
+ * @brief 选择引擎实现
+ * 
+ * Issue #7: Shape Selection and Move Functionality
+ * Author: eda_graphic_algo
  */
 
 #include "SelectionEngine.h"
-#include "GeometryAlgorithms.h"
-#include "../parser/GDSParser.h"
+#include "GDSData.h"
+#include "Boundary.h"
+#include "Path.h"
+#include "Structure.h"
+
 #include <QDebug>
-#include <QLineF>
-#include <QtMath>
-#include <cmath>
+#include <QRectF>
 
 namespace QLayoutEDA {
 
-//=============================================================================
-// SelectionEngine
-//=============================================================================
-
 SelectionEngine::SelectionEngine(QObject* parent)
     : QObject(parent)
+    , m_data(nullptr)
+    , m_tolerance(5.0)
 {
 }
 
-void SelectionEngine::setDataSource(GDSDataPtr data)
+void SelectionEngine::setDataSource(std::shared_ptr<GDSData> data)
 {
-    m_data = data;
-    if (data && !data->topStructure.isEmpty()) {
-        m_currentStructure = data->topStructure;
+    if (m_data != data) {
+        clearSelection();
+        m_data = data;
     }
 }
 
-void SelectionEngine::setSpatialIndex(QuadTree* index)
+void SelectionEngine::setTolerance(double tolerance)
 {
-    m_spatialIndex = index;
+    m_tolerance = tolerance;
 }
 
-void SelectionEngine::setTolerance(double pixels)
-{
-    m_tolerance = qMax(1.0, pixels);
-}
+// ============================================================
+// 选择操作
+// ============================================================
 
-//=============================================================================
-// 简化接口实现（使用 QuadTree）
-//=============================================================================
-
-QVector<ObjectId> SelectionEngine::pickPoint(const QPointF& pos, double tolerance)
+QVector<ObjectId> SelectionEngine::pickPoint(const QPointF& worldPos, double tolerance)
 {
     QVector<ObjectId> result;
     
     if (!m_data) {
+        qWarning() << "SelectionEngine: No data source set";
         return result;
     }
     
-    QString targetStructure = m_currentStructure.isEmpty() ? m_data->topStructure : m_currentStructure;
-    auto structure = m_data->getStructure(targetStructure);
+    double tol = (tolerance < 0) ? m_tolerance : tolerance;
+    
+    // 获取当前显示的 Structure
+    QString currentStructure = m_data->currentStructure();
+    if (currentStructure.isEmpty()) {
+        return result;
+    }
+    
+    // 遍历所有层
+    auto structure = m_data->getStructure(currentStructure);
     if (!structure) {
         return result;
     }
-    
-    // 优先使用 QuadTree 空间索引
-    if (m_spatialIndex) {
-        // 构建查询区域
-        QRectF queryRect(pos.x() - tolerance, pos.y() - tolerance, 
-                         tolerance * 2, tolerance * 2);
-        
-        // 从 QuadTree 查询候选图形
-        QVector<ShapeProxy> candidates = m_spatialIndex->query(queryRect);
-        
-        // 精确过滤
-        double minDist = std::numeric_limits<double>::max();
-        ObjectId nearestId;
-        bool found = false;
-        
-        for (const auto& proxy : candidates) {
-            // 计算点到图形边界的距离
-            double dist = 0;
-            double cx = proxy.bounds.center().x();
-            double cy = proxy.bounds.center().y();
-            dist = std::sqrt((pos.x() - cx) * (pos.x() - cx) + 
-                            (pos.y() - cy) * (pos.y() - cy));
-            
-            // 检查是否在容差范围内且更近
-            if (dist < tolerance && dist < minDist) {
-                minDist = dist;
-                nearestId = ObjectId(static_cast<ObjectId::Type>(proxy.type), 
-                                     proxy.index, targetStructure);
-                found = true;
-            }
-        }
-        
-        if (found) {
-            result.append(nearestId);
-        }
-        
-        return result;
-    }
-    
-    // 回退：无 QuadTree 时使用遍历方式
-    qint64 dbX = static_cast<qint64>(pos.x() * 1000);  // μm → nm
-    qint64 dbY = static_cast<qint64>(pos.y() * 1000);
-    qint64 tol = static_cast<qint64>(tolerance * 1000);
-    
-    double minDist = std::numeric_limits<double>::max();
-    ObjectId nearestId;
-    bool found = false;
     
     // 检查 Boundary
-    for (int i = 0; i < structure->boundaries.size(); ++i) {
-        const auto& boundary = structure->boundaries[i];
-        if (boundary.points.size() < 3) continue;
-        
-        // 快速边界框测试
-        qint64 bMinX = LLONG_MAX, bMaxX = LLONG_MIN;
-        qint64 bMinY = LLONG_MAX, bMaxY = LLONG_MIN;
-        for (const auto& pt : boundary.points) {
-            bMinX = qMin(bMinX, pt.x);
-            bMaxX = qMax(bMaxX, pt.x);
-            bMinY = qMin(bMinY, pt.y);
-            bMaxY = qMax(bMaxY, pt.y);
-        }
-        
-        if (dbX < bMinX - tol || dbX > bMaxX + tol ||
-            dbY < bMinY - tol || dbY > bMaxY + tol) {
-            continue;
-        }
-        
-        // 精确测试
-        QPointF testPoint(dbX, dbY);
-        if (pointInPolygon(testPoint, boundary.points)) {
-            double cx = (bMinX + bMaxX) / 2.0 / 1000.0;
-            double cy = (bMinY + bMaxY) / 2.0 / 1000.0;
-            double dist = std::sqrt((pos.x() - cx) * (pos.x() - cx) + 
-                                   (pos.y() - cy) * (pos.y() - cy));
-            if (dist < minDist) {
-                minDist = dist;
-                nearestId = ObjectId(ObjectId::Boundary, i, targetStructure);
-                found = true;
+    const auto& boundaries = structure->boundaries();
+    for (int layer : boundaries.keys()) {
+        const auto& layerBoundaries = boundaries[layer];
+        for (int i = 0; i < layerBoundaries.size(); ++i) {
+            if (isPointInsideBoundary(worldPos, createObjectId(currentStructure, layer, i, ObjectId::Boundary))) {
+                ObjectId id = createObjectId(currentStructure, layer, i, ObjectId::Boundary);
+                result.append(id);
             }
         }
     }
     
-    // 检查 Path
-    for (int i = 0; i < structure->paths.size(); ++i) {
-        const auto& path = structure->paths[i];
-        if (path.points.size() < 2) continue;
-        
-        if (pointNearPath(pos, path, tolerance)) {
-            // 计算中心距离
-            double cx = 0, cy = 0;
-            for (const auto& pt : path.points) {
-                cx += pt.x / 1000.0;
-                cy += pt.y / 1000.0;
-            }
-            cx /= path.points.size();
-            cy /= path.points.size();
-            double dist = std::sqrt((pos.x() - cx) * (pos.x() - cx) + 
-                                   (pos.y() - cy) * (pos.y() - cy));
-            if (dist < minDist) {
-                minDist = dist;
-                nearestId = ObjectId(ObjectId::Path, i, targetStructure);
-                found = true;
-            }
-        }
+    // TODO: 检查 Path, SREF, AREF
+    
+    // 如果不是添加模式，先清除现有选择
+    if (!m_addToExistingSelection && !result.isEmpty()) {
+        clearSelection();
     }
     
-    // 检查 Text
-    for (int i = 0; i < structure->texts.size(); ++i) {
-        const auto& text = structure->texts[i];
-        double tx = text.position.x / 1000.0;
-        double ty = text.position.y / 1000.0;
-        double dist = std::sqrt((pos.x() - tx) * (pos.x() - tx) + 
-                               (pos.y() - ty) * (pos.y() - ty));
-        if (dist < tolerance && dist < minDist) {
-            minDist = dist;
-            nearestId = ObjectId(ObjectId::Text, i, targetStructure);
-            found = true;
-        }
-    }
-    
-    if (found) {
-        result.append(nearestId);
-    }
-    
-    return result;
-}
-
-QVector<ObjectId> SelectionEngine::pickRect(const QRectF& rect)
-{
-    QVector<ObjectId> result;
-    
-    if (!m_data) {
-        return result;
-    }
-    
-    QString targetStructure = m_currentStructure.isEmpty() ? m_data->topStructure : m_currentStructure;
-    auto structure = m_data->getStructure(targetStructure);
-    if (!structure) {
-        return result;
-    }
-    
-    // 优先使用 QuadTree 空间索引
-    if (m_spatialIndex) {
-        // 从 QuadTree 查询范围内的图形
-        QVector<ShapeProxy> candidates = m_spatialIndex->query(rect);
-        
-        for (const auto& proxy : candidates) {
-            result.append(ObjectId(static_cast<ObjectId::Type>(proxy.type), 
-                                   proxy.index, targetStructure));
-        }
-        
-        return result;
-    }
-    
-    // 回退：无 QuadTree 时使用遍历方式
-    qint64 rectMinX = static_cast<qint64>(rect.left() * 1000);
-    qint64 rectMaxX = static_cast<qint64>(rect.right() * 1000);
-    qint64 rectMinY = static_cast<qint64>(rect.top() * 1000);
-    qint64 rectMaxY = static_cast<qint64>(rect.bottom() * 1000);
-    
-    // 检查 Boundary
-    for (int i = 0; i < structure->boundaries.size(); ++i) {
-        const auto& boundary = structure->boundaries[i];
-        if (boundary.points.size() < 3) continue;
-        
-        qint64 bMinX = LLONG_MAX, bMaxX = LLONG_MIN;
-        qint64 bMinY = LLONG_MAX, bMaxY = LLONG_MIN;
-        for (const auto& pt : boundary.points) {
-            bMinX = qMin(bMinX, pt.x);
-            bMaxX = qMax(bMaxX, pt.x);
-            bMinY = qMin(bMinY, pt.y);
-            bMaxY = qMax(bMaxY, pt.y);
-        }
-        
-        // 边界框相交测试
-        if (!(bMaxX < rectMinX || bMinX > rectMaxX ||
-              bMaxY < rectMinY || bMinY > rectMaxY)) {
-            result.append(ObjectId(ObjectId::Boundary, i, targetStructure));
-        }
-    }
-    
-    // 检查 Path
-    for (int i = 0; i < structure->paths.size(); ++i) {
-        const auto& path = structure->paths[i];
-        if (path.points.size() < 2) continue;
-        
-        qint64 pMinX = LLONG_MAX, pMaxX = LLONG_MIN;
-        qint64 pMinY = LLONG_MAX, pMaxY = LLONG_MIN;
-        for (const auto& pt : path.points) {
-            pMinX = qMin(pMinX, pt.x);
-            pMaxX = qMax(pMaxX, pt.x);
-            pMinY = qMin(pMinY, pt.y);
-            pMaxY = qMax(pMaxY, pt.y);
-        }
-        
-        if (!(pMaxX < rectMinX || pMinX > rectMaxX ||
-              pMaxY < rectMinY || pMinY > rectMaxY)) {
-            result.append(ObjectId(ObjectId::Path, i, targetStructure));
-        }
-    }
-    
-    // 检查 Text
-    for (int i = 0; i < structure->texts.size(); ++i) {
-        const auto& text = structure->texts[i];
-        qint64 tx = text.position.x;
-        qint64 ty = text.position.y;
-        
-        if (tx >= rectMinX && tx <= rectMaxX && ty >= rectMinY && ty <= rectMaxY) {
-            result.append(ObjectId(ObjectId::Text, i, targetStructure));
-        }
-    }
-    
-    return result;
-}
-
-QVector<ObjectId> SelectionEngine::selectAll(const QString& structureName)
-{
-    QVector<ObjectId> result;
-    
-    if (!m_data) {
-        return result;
-    }
-    
-    QString targetStructure = structureName.isEmpty() ? m_data->topStructure : structureName;
-    auto structure = m_data->getStructure(targetStructure);
-    if (!structure) {
-        return result;
-    }
-    
-    // 选择所有 Boundary
-    for (int i = 0; i < structure->boundaries.size(); ++i) {
-        result.append(ObjectId(ObjectId::Boundary, i, targetStructure));
-    }
-    
-    // 选择所有 Path
-    for (int i = 0; i < structure->paths.size(); ++i) {
-        result.append(ObjectId(ObjectId::Path, i, targetStructure));
-    }
-    
-    // 选择所有 Text
-    for (int i = 0; i < structure->texts.size(); ++i) {
-        result.append(ObjectId(ObjectId::Text, i, targetStructure));
-    }
-    
-    return result;
-}
-
-//=============================================================================
-// 原有接口实现
-//=============================================================================
-
-SelectionResult SelectionEngine::pickPointWithSelection(const QPointF& worldPoint, bool addToSelection)
-{
-    SelectionResult result;
-    
-    if (!m_data) return result;
-    
-    auto structure = m_data->getStructure(m_currentStructure);
-    if (!structure) return result;
-    
-    // 转换世界坐标到数据库单位（假设世界坐标是微米）
-    qint64 dbX = static_cast<qint64>(worldPoint.x() * 1000);  // μm → nm
-    qint64 dbY = static_cast<qint64>(worldPoint.y() * 1000);
-    qint64 tol = static_cast<qint64>(m_tolerance * 1000);  // 容差也转 nm
-    
-    // 1. 检查 Boundary
-    for (int i = 0; i < structure->boundaries.size(); ++i) {
-        const auto& boundary = structure->boundaries[i];
-        if (boundary.points.size() < 3) continue;
-        
-        // 计算边界框
-        qint64 bMinX = LLONG_MAX, bMaxX = LLONG_MIN;
-        qint64 bMinY = LLONG_MAX, bMaxY = LLONG_MIN;
-        for (const auto& pt : boundary.points) {
-            bMinX = qMin(bMinX, pt.x);
-            bMaxX = qMax(bMaxX, pt.x);
-            bMinY = qMin(bMinY, pt.y);
-            bMaxY = qMax(bMaxY, pt.y);
-        }
-        
-        // 快速排除
-        if (dbX < bMinX - tol || dbX > bMaxX + tol ||
-            dbY < bMinY - tol || dbY > bMaxY + tol) {
-            continue;
-        }
-        
-        // 精确测试：点是否在多边形内
-        if (pointInPolygon(QPointF(dbX, dbY), boundary.points)) {
-            SelectedObject obj;
-            obj.type = SelectedObject::Boundary;
-            obj.index = i;
-            obj.structureName = m_currentStructure;
-            obj.layer = boundary.layer;
-            result.objects.insert(obj);
-        }
-    }
-    
-    // 2. 检查 Path
-    for (int i = 0; i < structure->paths.size(); ++i) {
-        const auto& path = structure->paths[i];
-        if (path.points.size() < 2) continue;
-        
-        if (pointNearPath(worldPoint, path, m_tolerance)) {
-            SelectedObject obj;
-            obj.type = SelectedObject::Path;
-            obj.index = i;
-            obj.structureName = m_currentStructure;
-            obj.layer = path.layer;
-            result.objects.insert(obj);
-        }
-    }
-    
-    // 3. 检查 Text
-    for (int i = 0; i < structure->texts.size(); ++i) {
-        const auto& text = structure->texts[i];
-        // 简化：只检查位置点
-        double dx = worldPoint.x() - text.position.x / 1000.0;
-        double dy = worldPoint.y() - text.position.y / 1000.0;
-        if (dx * dx + dy * dy < m_tolerance * m_tolerance) {
-            SelectedObject obj;
-            obj.type = SelectedObject::Text;
-            obj.index = i;
-            obj.structureName = m_currentStructure;
-            obj.layer = text.layer;
-            result.objects.insert(obj);
-        }
-    }
-    
-    // 更新当前选择
-    if (!addToSelection) {
-        m_currentSelection = result.objects;
-    } else {
-        m_currentSelection.unite(result.objects);
+    // 添加到选择集
+    for (const auto& id : result) {
+        SelectedObject obj;
+        obj.id = id;
+        obj.structureName = id.structureName;
+        obj.layer = id.layer;
+        obj.index = id.index;
+        obj.objectType = SelectedObject::Boundary;
+        m_selectedObjects.insert(obj);
     }
     
     if (!result.isEmpty()) {
-        emit selectionChanged(m_currentSelection);
+        emit selectionChanged();
+        emit selectionCompleted(result.size());
     }
     
     return result;
 }
 
-SelectionResult SelectionEngine::pickRectWithSelection(const QRectF& worldRect, bool addToSelection)
+QVector<ObjectId> SelectionEngine::pickRect(const QRectF& worldRect)
 {
-    SelectionResult result;
+    QVector<ObjectId> result;
     
-    if (!m_data) return result;
+    if (!m_data) {
+        qWarning() << "SelectionEngine: No data source set";
+        return result;
+    }
     
-    auto structure = m_data->getStructure(m_currentStructure);
-    if (!structure) return result;
+    // 获取当前显示的 Structure
+    QString currentStructure = m_data->currentStructure();
+    if (currentStructure.isEmpty()) {
+        return result;
+    }
     
-    // 转换到数据库单位
-    qint64 rectMinX = static_cast<qint64>(worldRect.left() * 1000);
-    qint64 rectMaxX = static_cast<qint64>(worldRect.right() * 1000);
-    qint64 rectMinY = static_cast<qint64>(worldRect.top() * 1000);
-    qint64 rectMaxY = static_cast<qint64>(worldRect.bottom() * 1000);
+    auto structure = m_data->getStructure(currentStructure);
+    if (!structure) {
+        return result;
+    }
     
-    // 1. 检查 Boundary
-    for (int i = 0; i < structure->boundaries.size(); ++i) {
-        const auto& boundary = structure->boundaries[i];
-        if (boundary.points.size() < 3) continue;
-        
-        // 计算边界框
-        qint64 bMinX = LLONG_MAX, bMaxX = LLONG_MIN;
-        qint64 bMinY = LLONG_MAX, bMaxY = LLONG_MIN;
-        for (const auto& pt : boundary.points) {
-            bMinX = qMin(bMinX, pt.x);
-            bMaxX = qMax(bMaxX, pt.x);
-            bMinY = qMin(bMinY, pt.y);
-            bMaxY = qMax(bMaxY, pt.y);
+    // 检查 Boundary
+    const auto& boundaries = structure->boundaries();
+    for (int layer : boundaries.keys()) {
+        const auto& layerBoundaries = boundaries[layer];
+        for (int i = 0; i < layerBoundaries.size(); ++i) {
+            if (isRectIntersectBoundary(worldRect, createObjectId(currentStructure, layer, i, ObjectId::Boundary))) {
+                result.append(createObjectId(currentStructure, layer, i, ObjectId::Boundary));
+            }
         }
-        
-        // 边界框相交测试
-        if (bMaxX < rectMinX || bMinX > rectMaxX ||
-            bMaxY < rectMinY || bMinY > rectMaxY) {
-            continue;
-        }
-        
+    }
+    
+    // 如果不是添加模式，先清除现有选择
+    if (!m_addToExistingSelection && !result.isEmpty()) {
+        clearSelection();
+    }
+    
+    // 添加到选择集
+    for (const auto& id : result) {
         SelectedObject obj;
-        obj.type = SelectedObject::Boundary;
-        obj.index = i;
-        obj.structureName = m_currentStructure;
-        obj.layer = boundary.layer;
-        result.objects.insert(obj);
-    }
-    
-    // 2. 检查 Path
-    for (int i = 0; i < structure->paths.size(); ++i) {
-        const auto& path = structure->paths[i];
-        if (path.points.size() < 2) continue;
-        
-        // 计算边界框
-        qint64 pMinX = LLONG_MAX, pMaxX = LLONG_MIN;
-        qint64 pMinY = LLONG_MAX, pMaxY = LLONG_MIN;
-        for (const auto& pt : path.points) {
-            pMinX = qMin(pMinX, pt.x);
-            pMaxX = qMax(pMaxX, pt.x);
-            pMinY = qMin(pMinY, pt.y);
-            pMaxY = qMax(pMaxY, pt.y);
-        }
-        
-        if (pMaxX < rectMinX || pMinX > rectMaxX ||
-            pMaxY < rectMinY || pMinY > rectMaxY) {
-            continue;
-        }
-        
-        SelectedObject obj;
-        obj.type = SelectedObject::Path;
-        obj.index = i;
-        obj.structureName = m_currentStructure;
-        obj.layer = path.layer;
-        result.objects.insert(obj);
-    }
-    
-    // 3. 检查 Text
-    for (int i = 0; i < structure->texts.size(); ++i) {
-        const auto& text = structure->texts[i];
-        qint64 tx = text.position.x;
-        qint64 ty = text.position.y;
-        
-        if (tx >= rectMinX && tx <= rectMaxX && ty >= rectMinY && ty <= rectMaxY) {
-            SelectedObject obj;
-            obj.type = SelectedObject::Text;
-            obj.index = i;
-            obj.structureName = m_currentStructure;
-            obj.layer = text.layer;
-            result.objects.insert(obj);
-        }
-    }
-    
-    // 更新当前选择
-    if (!addToSelection) {
-        m_currentSelection = result.objects;
-    } else {
-        m_currentSelection.unite(result.objects);
+        obj.id = id;
+        obj.structureName = id.structureName;
+        obj.layer = id.layer;
+        obj.index = id.index;
+        obj.objectType = SelectedObject::Boundary;
+        m_selectedObjects.insert(obj);
     }
     
     if (!result.isEmpty()) {
-        emit selectionChanged(m_currentSelection);
+        emit selectionChanged();
+        emit selectionCompleted(result.size());
     }
     
-    return result;
-}
-
-void SelectionEngine::clearSelection()
-{
-    if (!m_currentSelection.isEmpty()) {
-        m_currentSelection.clear();
-        emit selectionChanged(m_currentSelection);
-    }
-}
-
-QSet<SelectedObject> SelectionEngine::filterByLayer(int layer) const
-{
-    QSet<SelectedObject> result;
-    for (const auto& obj : m_currentSelection) {
-        if (obj.layer == layer) {
-            result.insert(obj);
-        }
-    }
-    return result;
-}
-
-QSet<SelectedObject> SelectionEngine::filterByType(SelectedObject::Type type) const
-{
-    QSet<SelectedObject> result;
-    for (const auto& obj : m_currentSelection) {
-        if (obj.type == type) {
-            result.insert(obj);
-        }
-    }
     return result;
 }
 
@@ -536,215 +161,247 @@ SelectionResult SelectionEngine::selectAll()
 {
     SelectionResult result;
     
-    if (!m_data) return result;
+    if (!m_data) {
+        qWarning() << "SelectionEngine: No data source set";
+        return result;
+    }
     
-    auto structure = m_data->getStructure(m_currentStructure);
-    if (!structure) return result;
+    QString currentStructure = m_data->currentStructure();
+    if (currentStructure.isEmpty()) {
+        return result;
+    }
+    
+    auto structure = m_data->getStructure(currentStructure);
+    if (!structure) {
+        return result;
+    }
+    
+    // 清除现有选择
+    clearSelection();
     
     // 选择所有 Boundary
-    for (int i = 0; i < structure->boundaries.size(); ++i) {
-        SelectedObject obj;
-        obj.type = SelectedObject::Boundary;
-        obj.index = i;
-        obj.structureName = m_currentStructure;
-        obj.layer = structure->boundaries[i].layer;
-        result.objects.insert(obj);
+    const auto& boundaries = structure->boundaries();
+    for (int layer : boundaries.keys()) {
+        const auto& layerBoundaries = boundaries[layer];
+        for (int i = 0; i < layerBoundaries.size(); ++i) {
+            ObjectId id = createObjectId(currentStructure, layer, i, ObjectId::Boundary);
+            result.selectedIds.append(id);
+            
+            SelectedObject obj;
+            obj.id = id;
+            obj.structureName = currentStructure;
+            obj.layer = layer;
+            obj.index = i;
+            obj.objectType = SelectedObject::Boundary;
+            m_selectedObjects.insert(obj);
+        }
     }
     
-    // 选择所有 Path
-    for (int i = 0; i < structure->paths.size(); ++i) {
-        SelectedObject obj;
-        obj.type = SelectedObject::Path;
-        obj.index = i;
-        obj.structureName = m_currentStructure;
-        obj.layer = structure->paths[i].layer;
-        result.objects.insert(obj);
+    if (!result.isEmpty()) {
+        emit selectionChanged();
+        emit selectionCompleted(result.count());
     }
-    
-    // 选择所有 Text
-    for (int i = 0; i < structure->texts.size(); ++i) {
-        SelectedObject obj;
-        obj.type = SelectedObject::Text;
-        obj.index = i;
-        obj.structureName = m_currentStructure;
-        obj.layer = structure->texts[i].layer;
-        result.objects.insert(obj);
-    }
-    
-    m_currentSelection = result.objects;
-    emit selectionChanged(m_currentSelection);
     
     return result;
+}
+
+void SelectionEngine::addToSelection(const QVector<ObjectId>& ids)
+{
+    for (const auto& id : ids) {
+        SelectedObject obj;
+        obj.id = id;
+        obj.structureName = id.structureName;
+        obj.layer = id.layer;
+        obj.index = id.index;
+        obj.objectType = static_cast<SelectedObject::ObjectType>(id.type);
+        m_selectedObjects.insert(obj);
+    }
+    
+    if (!ids.isEmpty()) {
+        emit selectionChanged();
+    }
+}
+
+void SelectionEngine::removeFromSelection(const QVector<ObjectId>& ids)
+{
+    for (const auto& id : ids) {
+        for (auto it = m_selectedObjects.begin(); it != m_selectedObjects.end(); ) {
+            if (it->id == id) {
+                it = m_selectedObjects.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
+    
+    if (!ids.isEmpty()) {
+        emit selectionChanged();
+    }
+}
+
+// ============================================================
+// 选择管理
+// ============================================================
+
+void SelectionEngine::clearSelection()
+{
+    if (m_selectedObjects.isEmpty()) {
+        return;
+    }
+    
+    m_selectedObjects.clear();
+    emit selectionChanged();
 }
 
 SelectionResult SelectionEngine::invertSelection()
 {
     SelectionResult result;
     
-    if (!m_data) return result;
+    if (!m_data) {
+        return result;
+    }
     
-    auto structure = m_data->getStructure(m_currentStructure);
-    if (!structure) return result;
+    QString currentStructure = m_data->currentStructure();
+    if (currentStructure.isEmpty()) {
+        return result;
+    }
     
-    // 反选所有 Boundary
-    for (int i = 0; i < structure->boundaries.size(); ++i) {
-        SelectedObject obj;
-        obj.type = SelectedObject::Boundary;
-        obj.index = i;
-        obj.structureName = m_currentStructure;
-        obj.layer = structure->boundaries[i].layer;
-        
-        if (!m_currentSelection.contains(obj)) {
-            result.objects.insert(obj);
+    auto structure = m_data->getStructure(currentStructure);
+    if (!structure) {
+        return result;
+    }
+    
+    // 收集当前选中的 ID
+    QSet<ObjectId> currentSelected;
+    for (const auto& obj : m_selectedObjects) {
+        currentSelected.insert(obj.id);
+    }
+    
+    // 清除选择
+    m_selectedObjects.clear();
+    
+    // 选择所有未选中的对象
+    const auto& boundaries = structure->boundaries();
+    for (int layer : boundaries.keys()) {
+        const auto& layerBoundaries = boundaries[layer];
+        for (int i = 0; i < layerBoundaries.size(); ++i) {
+            ObjectId id = createObjectId(currentStructure, layer, i, ObjectId::Boundary);
+            
+            if (!currentSelected.contains(id)) {
+                result.selectedIds.append(id);
+                
+                SelectedObject obj;
+                obj.id = id;
+                obj.structureName = currentStructure;
+                obj.layer = layer;
+                obj.index = i;
+                obj.objectType = SelectedObject::Boundary;
+                m_selectedObjects.insert(obj);
+            }
         }
     }
     
-    // 反选所有 Path
-    for (int i = 0; i < structure->paths.size(); ++i) {
-        SelectedObject obj;
-        obj.type = SelectedObject::Path;
-        obj.index = i;
-        obj.structureName = m_currentStructure;
-        obj.layer = structure->paths[i].layer;
-        
-        if (!m_currentSelection.contains(obj)) {
-            result.objects.insert(obj);
-        }
-    }
-    
-    // 反选所有 Text
-    for (int i = 0; i < structure->texts.size(); ++i) {
-        SelectedObject obj;
-        obj.type = SelectedObject::Text;
-        obj.index = i;
-        obj.structureName = m_currentStructure;
-        obj.layer = structure->texts[i].layer;
-        
-        if (!m_currentSelection.contains(obj)) {
-            result.objects.insert(obj);
-        }
-    }
-    
-    m_currentSelection = result.objects;
-    emit selectionChanged(m_currentSelection);
+    emit selectionChanged();
+    emit selectionCompleted(result.count());
     
     return result;
 }
 
-bool SelectionEngine::pointInPolygon(const QPointF& point, const QVector<DbPoint>& polygon) const
+QSet<SelectedObject> SelectionEngine::filterByLayer(int layer)
 {
-    // 射线法判断点是否在多边形内
-    int n = polygon.size();
-    bool inside = false;
-    
-    for (int i = 0, j = n - 1; i < n; j = i++) {
-        double xi = polygon[i].x;
-        double yi = polygon[i].y;
-        double xj = polygon[j].x;
-        double yj = polygon[j].y;
-        
-        if (((yi > point.y()) != (yj > point.y())) &&
-            (point.x() < (xj - xi) * (point.y() - yi) / (yj - yi) + xi)) {
-            inside = !inside;
+    QSet<SelectedObject> result;
+    for (const auto& obj : m_selectedObjects) {
+        if (obj.layer == layer) {
+            result.insert(obj);
         }
     }
-    
-    return inside;
+    return result;
 }
 
-bool SelectionEngine::pointNearPath(const QPointF& point, const GDSPath& path, double tolerance) const
+QSet<SelectedObject> SelectionEngine::filterByType(SelectedObject::ObjectType type)
 {
-    // 检查点是否在路径附近
-    for (int i = 0; i < path.points.size() - 1; ++i) {
-        QPointF p1(path.points[i].x / 1000.0, path.points[i].y / 1000.0);
-        QPointF p2(path.points[i+1].x / 1000.0, path.points[i+1].y / 1000.0);
-        
-        // 计算点到线段的距离
-        double dx = p2.x() - p1.x();
-        double dy = p2.y() - p1.y();
-        double lengthSq = dx * dx + dy * dy;
-        
-        double dist;
-        if (lengthSq < 1e-12) {
-            // 线段退化为点
-            dist = QLineF(point, p1).length();
-        } else {
-            // 计算投影参数
-            double t = ((point.x() - p1.x()) * dx + (point.y() - p1.y()) * dy) / lengthSq;
-            t = qBound(0.0, t, 1.0);
-            
-            // 计算最近点
-            double nearestX = p1.x() + t * dx;
-            double nearestY = p1.y() + t * dy;
-            
-            dist = std::sqrt((point.x() - nearestX) * (point.x() - nearestX) + 
-                            (point.y() - nearestY) * (point.y() - nearestY));
-        }
-        
-        if (dist < tolerance) {
-            return true;
+    QSet<SelectedObject> result;
+    for (const auto& obj : m_selectedObjects) {
+        if (obj.objectType == type) {
+            result.insert(obj);
         }
     }
-    return false;
+    return result;
 }
 
-bool SelectionEngine::rectIntersectsPolygon(const QRectF& rect, const QVector<DbPoint>& polygon) const
+// ============================================================
+// 内部辅助方法
+// ============================================================
+
+bool SelectionEngine::isPointInsideBoundary(const QPointF& point, const ObjectId& id)
 {
-    // 简化：只检查边界框相交
-    if (polygon.isEmpty()) return false;
+    // TODO: 实现真正的点在多边形内部检测
+    // 目前使用简单的边界框检测
     
-    qint64 minX = LLONG_MAX, maxX = LLONG_MIN;
-    qint64 minY = LLONG_MAX, maxY = LLONG_MIN;
-    
-    for (const auto& pt : polygon) {
-        minX = qMin(minX, pt.x);
-        maxX = qMax(maxX, pt.x);
-        minY = qMin(minY, pt.y);
-        maxY = qMax(maxY, pt.y);
+    if (!m_data) {
+        return false;
     }
     
-    return !(maxX < rect.left() * 1000 || minX > rect.right() * 1000 ||
-             maxY < rect.top() * 1000 || minY > rect.bottom() * 1000);
+    auto structure = m_data->getStructure(id.structureName);
+    if (!structure) {
+        return false;
+    }
+    
+    const auto& boundaries = structure->boundaries();
+    if (!boundaries.contains(id.layer)) {
+        return false;
+    }
+    
+    const auto& layerBoundaries = boundaries[id.layer];
+    if (id.index < 0 || id.index >= layerBoundaries.size()) {
+        return false;
+    }
+    
+    // 获取边界框并检测
+    const auto& boundary = layerBoundaries[id.index];
+    QRectF bbox = boundary.boundingBox();
+    
+    // 扩展边界框以包含容差
+    bbox.adjust(-m_tolerance, -m_tolerance, m_tolerance, m_tolerance);
+    
+    return bbox.contains(point);
 }
 
-QRectF SelectionEngine::getBoundaryBounds(const GDSBoundary& boundary) const
+bool SelectionEngine::isRectIntersectBoundary(const QRectF& rect, const ObjectId& id)
 {
-    if (boundary.points.isEmpty()) return QRectF();
-    
-    double minX = 1e30, maxX = -1e30;
-    double minY = 1e30, maxY = -1e30;
-    
-    for (const auto& pt : boundary.points) {
-        double x = pt.x / 1000.0;
-        double y = pt.y / 1000.0;
-        minX = qMin(minX, x);
-        maxX = qMax(maxX, x);
-        minY = qMin(minY, y);
-        maxY = qMax(maxY, y);
+    if (!m_data) {
+        return false;
     }
     
-    return QRectF(minX, minY, maxX - minX, maxY - minY);
+    auto structure = m_data->getStructure(id.structureName);
+    if (!structure) {
+        return false;
+    }
+    
+    const auto& boundaries = structure->boundaries();
+    if (!boundaries.contains(id.layer)) {
+        return false;
+    }
+    
+    const auto& layerBoundaries = boundaries[id.layer];
+    if (id.index < 0 || id.index >= layerBoundaries.size()) {
+        return false;
+    }
+    
+    const auto& boundary = layerBoundaries[id.index];
+    QRectF bbox = boundary.boundingBox();
+    
+    return rect.intersects(bbox);
 }
 
-QRectF SelectionEngine::getPathBounds(const GDSPath& path) const
+ObjectId SelectionEngine::createObjectId(const QString& structureName, int layer, int index, ObjectId::Type type)
 {
-    if (path.points.isEmpty()) return QRectF();
-    
-    double halfWidth = path.width / 2000.0;  // nm → μm
-    
-    double minX = 1e30, maxX = -1e30;
-    double minY = 1e30, maxY = -1e30;
-    
-    for (const auto& pt : path.points) {
-        double x = pt.x / 1000.0;
-        double y = pt.y / 1000.0;
-        minX = qMin(minX, x - halfWidth);
-        maxX = qMax(maxX, x + halfWidth);
-        minY = qMin(minY, y - halfWidth);
-        maxY = qMax(maxY, y + halfWidth);
-    }
-    
-    return QRectF(minX, minY, maxX - minX, maxY - minY);
+    ObjectId id;
+    id.structureName = structureName;
+    id.layer = layer;
+    id.index = index;
+    id.type = type;
+    return id;
 }
 
 } // namespace QLayoutEDA
