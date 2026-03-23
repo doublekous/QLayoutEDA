@@ -77,6 +77,11 @@ public:
      */
     QString currentStructure() const { return m_currentStructure; }
     
+    /**
+     * @brief 获取当前视图变换
+     */
+    ViewTransform getViewTransform() const { return m_transform; }
+    
     // 视图操作
     void zoomIn();
     void zoomOut();
@@ -138,6 +143,17 @@ private:
     // 坐标转换
     QPointF screenToWorld(const QPointF& screen) const;
     QPointF worldToScreen(const QPointF& world) const;
+    
+    /**
+     * @brief 屏幕坐标转数据库坐标（用于绘制）
+     * 与渲染使用相同的坐标系统
+     */
+    QPointF screenToDatabase(const QPointF& screen) const;
+    
+    /**
+     * @brief 数据库坐标转屏幕坐标（用于预览）
+     */
+    QPointF databaseToScreen(const QPointF& db) const;
     
     // 绘制函数
     void drawGrid(QPainter& painter);
@@ -234,6 +250,11 @@ private:
     QRectF m_drawRect;                   ///< 绘制矩形预览
     QPointF m_drawCircleCenter;          ///< 圆心
     double m_drawCircleRadius = 0;       ///< 圆半径
+    
+    // 默认绘制参数（单位：纳米）
+    static constexpr qint64 DEFAULT_SHAPE_SIZE = 5000;  ///< 默认 5 μm = 5000 nm
+    static constexpr qint64 MAX_SHAPE_SIZE = 50000;     ///< 最大 50 μm = 50000 nm
+    static constexpr qint64 MIN_SHAPE_SIZE = 1000;      ///< 最小 1 μm = 1000 nm
     
     // 渲染配置
     RenderConfig m_renderConfig;

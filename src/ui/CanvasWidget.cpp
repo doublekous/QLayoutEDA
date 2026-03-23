@@ -164,6 +164,15 @@ void CanvasWidget::setCurrentStructure(const QString& structureName)
     m_currentStructure = structureName;
     m_selectedObjects.clear();
     
+    // 重置绘制状态
+    m_isDrawing = false;
+    m_drawPoints.clear();
+    m_drawCircleRadius = 0;
+    m_drawRect = QRectF();
+    
+    // 清除图像缓存
+    m_imageCache.clear();
+    
     // 自动适配视图
     fitAll();
     
@@ -384,6 +393,124 @@ QPointF CanvasWidget::worldToScreen(const QPointF& world) const
         (world.x() + m_transform.offsetX) * m_transform.scale + width() / 2.0,
         height() / 2.0 - (world.y() + m_transform.offsetY) * m_transform.scale
     );
+}
+
+QPointF CanvasWidget::screenToDatabase(const QPointF& screen) const
+{
+    // 调试输出
+    qDebug() << "=== screenToDatabase ===" 
+             << "screen:" << screen 
+             << "m_gdsData:" << (m_gdsData ? "valid" : "null")
+             << "m_currentStructure:" << m_currentStructure;
+    
+    // 使用与 drawObjects 相同的坐标系统
+    if (!m_gdsData || m_currentStructure.isEmpty()) {
+        // 无数据时：使用合理的默认值
+        // 假设画布中心为原点，1 像素 ≈ 1μm（根据典型 EDA 设计）
+        // 但实际上应该参考已加载的数据范围
+        qDebug() << "No GDS data, using default conversion";
+        return QPointF(screen.x() * 1000, -screen.y() * 1000);
+    }
+    
+    auto structure = m_gdsData->getStructure(m_currentStructure);
+    if (!structure) {
+        qDebug() << "Structure not found:" << m_currentStructure;
+        return QPointF(screen.x() * 1000, -screen.y() * 1000);
+    }
+    
+    qDebug() << "Structure found, boundaries:" << structure->boundaries.size();
+    
+    // 计算边界框（与 drawObjects 相同）
+    qint64 minX = LLONG_MAX, maxX = LLONG_MIN, minY = LLONG_MAX, maxY = LLONG_MIN;
+    bool hasValidBounds = false;
+    
+    for (const auto& b : structure->boundaries) {
+        for (const auto& p : b.points) {
+            minX = qMin(minX, p.x);
+            maxX = qMax(maxX, p.x);
+            minY = qMin(minY, p.y);
+            maxY = qMax(maxY, p.y);
+            hasValidBounds = true;
+        }
+    }
+    
+    if (!hasValidBounds) {
+        return QPointF(screen.x() * 1000, -screen.y() * 1000);
+    }
+    
+    qint64 dbW = maxX - minX;
+    qint64 dbH = maxY - minY;
+    
+    if (dbW <= 0 || dbH <= 0) {
+        return QPointF(screen.x() * 1000, -screen.y() * 1000);
+    }
+    
+    // 使用与 drawObjects 相同的计算
+    double baseScale = qMin((width() - 100.0) / dbW, (height() - 100.0) / dbH);
+    double scale = baseScale * m_transform.scale;
+    
+    double offsetY = (height() + dbH * scale) / 2.0 + minY * scale;
+    double offsetX = (width() - dbW * scale) / 2.0 - minX * scale;
+    offsetX += m_transform.offsetX * scale;
+    offsetY -= m_transform.offsetY * scale;
+    
+    // 逆变换：屏幕坐标 → 数据库坐标
+    double dbX = (screen.x() - offsetX) / scale;
+    double dbY = (offsetY - screen.y()) / scale;  // Y轴翻转
+    
+    return QPointF(dbX, dbY);
+}
+
+QPointF CanvasWidget::databaseToScreen(const QPointF& db) const
+{
+    if (!m_gdsData || m_currentStructure.isEmpty()) {
+        return QPointF(db.x() / 1000, -db.y() / 1000);
+    }
+    
+    auto structure = m_gdsData->getStructure(m_currentStructure);
+    if (!structure) {
+        return QPointF(db.x() / 1000, -db.y() / 1000);
+    }
+    
+    // 计算边界框
+    qint64 minX = LLONG_MAX, maxX = LLONG_MIN, minY = LLONG_MAX, maxY = LLONG_MIN;
+    bool hasValidBounds = false;
+    
+    for (const auto& b : structure->boundaries) {
+        for (const auto& p : b.points) {
+            minX = qMin(minX, p.x);
+            maxX = qMax(maxX, p.x);
+            minY = qMin(minY, p.y);
+            maxY = qMax(maxY, p.y);
+            hasValidBounds = true;
+        }
+    }
+    
+    if (!hasValidBounds) {
+        return QPointF(db.x() / 1000, -db.y() / 1000);
+    }
+    
+    qint64 dbW = maxX - minX;
+    qint64 dbH = maxY - minY;
+    
+    if (dbW <= 0 || dbH <= 0) {
+        return QPointF(db.x() / 1000, -db.y() / 1000);
+    }
+    
+    // 使用与 drawObjects 相同的计算
+    double baseScale = qMin((width() - 100.0) / dbW, (height() - 100.0) / dbH);
+    double scale = baseScale * m_transform.scale;
+    
+    double offsetY = (height() + dbH * scale) / 2.0 + minY * scale;
+    double offsetX = (width() - dbW * scale) / 2.0 - minX * scale;
+    offsetX += m_transform.offsetX * scale;
+    offsetY -= m_transform.offsetY * scale;
+    
+    // 正变换：数据库坐标 → 屏幕坐标
+    double screenX = db.x() * scale + offsetX;
+    double screenY = offsetY - db.y() * scale;  // Y轴翻转
+    
+    return QPointF(screenX, screenY);
 }
 
 //=============================================================================
@@ -625,6 +752,8 @@ void CanvasWidget::drawObjects(QPainter& painter)
         if (firstRender || renderTime > 100) {
             qDebug() << "\n=== 渲染统计 ===";
             qDebug() << "结构:" << structName;
+            qDebug() << "数据库坐标范围: X[" << minX << "," << maxX << "] Y[" << minY << "," << maxY << "]";
+            qDebug() << "数据库尺寸:" << dbW << "x" << dbH << "nm =" << dbW/1000.0 << "x" << dbH/1000.0 << "μm";
             qDebug() << "缩放:" << m_transform.scale << "(展开阈值:" << SREF_EXPAND_THRESHOLD << ")";
             qDebug() << "SREF 总数:" << stats.srefCount << "| 展开数:" << srefExpandedCount;
             qDebug() << "AREF:" << stats.arefCount;
@@ -638,28 +767,42 @@ void CanvasWidget::drawObjects(QPainter& painter)
         
     } else {
         // 无数据时绘制示例对象
-        QRectF sampleRect(-500, -300, 1000, 600);
-        QPointF tl = worldToScreen(sampleRect.topLeft());
-        QPointF br = worldToScreen(sampleRect.bottomRight());
-        QRectF screenRect(tl, br);
+        // 使用 5 μm 作为默认尺寸
+        qint64 defaultSize = DEFAULT_SHAPE_SIZE;  // 5000 nm = 5 μm
+        
+        // 示例矩形：5 x 3 μm
+        qint64 sampleMinX = -defaultSize;   // -5 μm
+        qint64 sampleMaxX = defaultSize;    // 5 μm
+        qint64 sampleMinY = -defaultSize * 3 / 5;  // -3 μm
+        qint64 sampleMaxY = defaultSize * 3 / 5;   // 3 μm
+        
+        // 使用与 drawObjects 相同的计算方式
+        qint64 dbW = sampleMaxX - sampleMinX;
+        qint64 dbH = sampleMaxY - sampleMinY;
+        double baseScale = qMin((width() - 100.0) / qMax(1LL, dbW), (height() - 100.0) / qMax(1LL, dbH));
+        double scale = baseScale * m_transform.scale;
+        
+        double offsetY = (height() + dbH * scale) / 2.0 + sampleMinY * scale;
+        double offsetX = (width() - dbW * scale) / 2.0 - sampleMinX * scale;
+        
+        // 示例矩形
+        QPolygonF rectPoly;
+        rectPoly << QPointF(sampleMinX * scale + offsetX, -sampleMinY * scale + offsetY)
+                 << QPointF(sampleMaxX * scale + offsetX, -sampleMinY * scale + offsetY)
+                 << QPointF(sampleMaxX * scale + offsetX, -sampleMaxY * scale + offsetY)
+                 << QPointF(sampleMinX * scale + offsetX, -sampleMaxY * scale + offsetY);
         
         painter.setPen(QPen(QColor(100, 150, 255), 2));
         painter.setBrush(QColor(100, 150, 255, 100));
-        painter.drawRect(screenRect);
+        painter.drawPolygon(rectPoly);
         
-        QPolygonF poly;
-        poly << worldToScreen(QPointF(200, 200))
-             << worldToScreen(QPointF(400, 100))
-             << worldToScreen(QPointF(500, 300))
-             << worldToScreen(QPointF(350, 400))
-             << worldToScreen(QPointF(200, 350));
+        // 示例圆：半径 2.5 μm
+        qint64 circleX = -defaultSize * 3 / 2;  // -7.5 μm
+        qint64 circleY = defaultSize / 2;       // 2.5 μm
+        qint64 circleR = defaultSize / 2;       // 2.5 μm
         
-        painter.setPen(QPen(QColor(255, 150, 100), 2));
-        painter.setBrush(QColor(255, 150, 100, 100));
-        painter.drawPolygon(poly);
-        
-        QPointF circleCenter = worldToScreen(QPointF(-300, 200));
-        double radius = 100 * m_transform.scale;
+        QPointF circleCenter(circleX * scale + offsetX, -circleY * scale + offsetY);
+        double radius = circleR * scale;
         
         painter.setPen(QPen(QColor(150, 255, 100), 2));
         painter.setBrush(QColor(150, 255, 100, 100));
@@ -691,18 +834,20 @@ void CanvasWidget::drawPreview(QPainter& painter)
     painter.setPen(QPen(QColor(255, 255, 0), 2, Qt::DashLine));
     painter.setBrush(QColor(255, 255, 0, 50));
     
+    // 关键修复：m_drawPoints 现在存储数据库坐标，需要用 databaseToScreen 转换
     switch (m_currentTool) {
     case Tool::DrawRectangle: {
-        QPointF tl = worldToScreen(m_drawRect.topLeft());
-        QPointF br = worldToScreen(m_drawRect.bottomRight());
+        // 使用 databaseToScreen 转换
+        QPointF tl = databaseToScreen(m_drawRect.topLeft());
+        QPointF br = databaseToScreen(m_drawRect.bottomRight());
         painter.drawRect(QRectF(tl, br).normalized());
         
-        // 显示尺寸信息
-        double width = m_drawRect.width();
-        double height = m_drawRect.height();
-        QString info = QString("W: %1 μm  H: %2 μm").arg(width, 0, 'f', 2).arg(height, 0, 'f', 2);
+        // 显示尺寸信息（数据库坐标是纳米，转换为微米显示）
+        double width_nm = m_drawRect.width();
+        double height_nm = m_drawRect.height();
+        QString info = QString("W: %1 μm  H: %2 μm").arg(width_nm / 1000.0, 0, 'f', 2).arg(height_nm / 1000.0, 0, 'f', 2);
         painter.setPen(Qt::white);
-        QPointF center = worldToScreen(m_drawRect.center());
+        QPointF center = databaseToScreen(m_drawRect.center());
         painter.drawText(center + QPointF(10, -10), info);
         break;
     }
@@ -712,9 +857,9 @@ void CanvasWidget::drawPreview(QPainter& painter)
         if (!m_drawPoints.isEmpty()) {
             QPolygonF screenPoly;
             for (const QPointF& pt : m_drawPoints) {
-                screenPoly << worldToScreen(pt);
+                screenPoly << databaseToScreen(pt);  // 使用 databaseToScreen
             }
-            screenPoly << worldToScreen(m_currentDrawPoint);
+            screenPoly << databaseToScreen(m_currentDrawPoint);  // 使用 databaseToScreen
             
             if (m_currentTool == Tool::DrawPolygon) {
                 painter.drawPolygon(screenPoly);
@@ -732,14 +877,47 @@ void CanvasWidget::drawPreview(QPainter& painter)
     }
     
     case Tool::DrawCircle: {
-        QPointF center = worldToScreen(m_drawCircleCenter);
-        double radius = m_drawCircleRadius * m_transform.scale;
-        painter.drawEllipse(center, radius, radius);
+        // 只有在半径大于 0 时才绘制
+        if (m_drawCircleRadius <= 0) {
+            break;
+        }
         
-        // 显示半径信息
-        QString info = QString("R: %1 μm").arg(m_drawCircleRadius, 0, 'f', 2);
-        painter.setPen(Qt::white);
-        painter.drawText(center + QPointF(radius + 10, 0), info);
+        // 使用 databaseToScreen 转换圆心
+        QPointF center = databaseToScreen(m_drawCircleCenter);
+        
+        // 计算屏幕上的半径（需要考虑缩放）
+        // m_drawCircleRadius 是数据库坐标（纳米）
+        // 需要转换为屏幕像素
+        if (!m_gdsData || m_currentStructure.isEmpty()) {
+            // 无数据时使用简化方法
+            double radius = m_drawCircleRadius / 1000.0 * m_transform.scale;
+            painter.drawEllipse(center, radius, radius);
+        } else {
+            auto structure = m_gdsData->getStructure(m_currentStructure);
+            if (structure) {
+                // 使用与渲染相同的缩放
+                qint64 minX = LLONG_MAX, maxX = LLONG_MIN, minY = LLONG_MAX, maxY = LLONG_MIN;
+                for (const auto& b : structure->boundaries) {
+                    for (const auto& p : b.points) {
+                        minX = qMin(minX, p.x);
+                        maxX = qMax(maxX, p.x);
+                        minY = qMin(minY, p.y);
+                        maxY = qMax(maxY, p.y);
+                    }
+                }
+                qint64 dbW = maxX - minX;
+                qint64 dbH = maxY - minY;
+                double baseScale = qMin((width() - 100.0) / qMax(1LL, dbW), (height() - 100.0) / qMax(1LL, dbH));
+                double scale = baseScale * m_transform.scale;
+                double radius = m_drawCircleRadius * scale;
+                painter.drawEllipse(center, radius, radius);
+                
+                // 显示半径信息
+                QString info = QString("R: %1 μm").arg(m_drawCircleRadius / 1000.0, 0, 'f', 2);
+                painter.setPen(Qt::white);
+                painter.drawText(center + QPointF(radius + 10, 0), info);
+            }
+        }
         break;
     }
     
@@ -893,14 +1071,16 @@ void CanvasWidget::mouseMoveEvent(QMouseEvent* event)
         return;
     }
     
-    // 绘制预览
+    // 绘制预览 - 使用数据库坐标系统
     if (m_isDrawing) {
-        m_currentDrawPoint = worldPos;
+        // 关键修复：使用 screenToDatabase 获取与渲染一致的坐标
+        QPointF dbPos = screenToDatabase(event->pos());
+        m_currentDrawPoint = dbPos;
         
         if (m_currentTool == Tool::DrawRectangle) {
-            m_drawRect = QRectF(m_drawPoints.first(), worldPos).normalized();
+            m_drawRect = QRectF(m_drawPoints.first(), dbPos).normalized();
         } else if (m_currentTool == Tool::DrawCircle) {
-            QPointF diff = worldPos - m_drawCircleCenter;
+            QPointF diff = dbPos - m_drawCircleCenter;
             m_drawCircleRadius = std::sqrt(diff.x() * diff.x() + diff.y() * diff.y());
         }
         
@@ -1305,56 +1485,118 @@ void CanvasWidget::handlePanPress(const QPointF& worldPos, Qt::MouseButton butto
     }
 }
 
-void CanvasWidget::handleDrawPress(const QPointF& worldPos, Qt::MouseButton button)
+void CanvasWidget::handleDrawPress(const QPointF& screenPos, Qt::MouseButton button)
 {
+    // 关键修复：使用 screenToDatabase 获取与渲染一致的数据库坐标
+    QPointF dbPos = screenToDatabase(screenPos);
+    
+    qDebug() << "=== handleDrawPress === button:" << button 
+             << "screenPos:" << screenPos 
+             << "dbPos:" << dbPos
+             << "canvas size:" << width() << "x" << height();
+    
     if (button == Qt::LeftButton) {
         if (!m_isDrawing) {
             // 开始绘制
             m_isDrawing = true;
             m_drawPoints.clear();
-            m_drawPoints.append(worldPos);
+            m_drawPoints.append(dbPos);  // 使用数据库坐标
             
             if (m_currentTool == Tool::DrawCircle) {
-                m_drawCircleCenter = worldPos;
+                m_drawCircleCenter = dbPos;
                 m_drawCircleRadius = 0;
+                qDebug() << "Circle drawing started, center:" << m_drawCircleCenter;
             } else if (m_currentTool == Tool::DrawRectangle) {
-                m_drawRect = QRectF(worldPos, worldPos);
+                m_drawRect = QRectF(dbPos, dbPos);
+                qDebug() << "Rectangle drawing started, rect:" << m_drawRect;
             }
             
-            emit statusMessage(tr("Drawing... Right-click or Double-click to finish"));
+            qDebug() << "Drawing started, tool:" << (int)m_currentTool;
+            emit statusMessage(tr("Drawing... Right-click to finish"));
         } else {
-            // 添加点
-            m_drawPoints.append(worldPos);
+            // 添加点（用于 Polygon/Path）
+            m_drawPoints.append(dbPos);  // 使用数据库坐标
             
-            if (m_currentTool == Tool::DrawRectangle) {
-                // 矩形只需要两个点
-                if (m_drawPoints.size() >= 2) {
-                    m_drawRect = QRectF(m_drawPoints.first(), m_drawPoints.last()).normalized();
-                    emit objectCreated("Rectangle", m_drawRect);
-                    m_isDrawing = false;
-                    m_drawPoints.clear();
-                }
+            if (m_currentTool == Tool::DrawPolygon) {
+                emit statusMessage(tr("Polygon: %1 points. Right-click to finish").arg(m_drawPoints.size()));
+            } else if (m_currentTool == Tool::DrawPath) {
+                emit statusMessage(tr("Path: %1 points. Right-click to finish").arg(m_drawPoints.size()));
             }
         }
     } else if (button == Qt::RightButton && m_isDrawing) {
+        qDebug() << "Right button pressed, finishing drawing...";
+        
         // 右键完成绘制
-        if (m_currentTool == Tool::DrawPolygon && m_drawPoints.size() >= 3) {
-            QRectF bounds;
-            for (const QPointF& pt : m_drawPoints) {
-                bounds = bounds.united(QRectF(pt, pt));
+        if (m_currentTool == Tool::DrawRectangle) {
+            // 矩形：限制尺寸范围
+            QRectF rect = m_drawRect;
+            double w = qAbs(rect.width());
+            double h = qAbs(rect.height());
+            
+            if (w < MIN_SHAPE_SIZE || h < MIN_SHAPE_SIZE) {
+                // 使用默认尺寸
+                qreal cx = rect.center().x();
+                qreal cy = rect.center().y();
+                rect = QRectF(cx - DEFAULT_SHAPE_SIZE/2, cy - DEFAULT_SHAPE_SIZE/2,
+                              DEFAULT_SHAPE_SIZE, DEFAULT_SHAPE_SIZE);
+                qDebug() << "Rectangle too small, using default 5μm";
+            } else if (w > MAX_SHAPE_SIZE || h > MAX_SHAPE_SIZE) {
+                // 限制最大尺寸
+                qreal cx = rect.center().x();
+                qreal cy = rect.center().y();
+                double newSize = qMin(w, h);
+                newSize = qMin(newSize, (double)MAX_SHAPE_SIZE);
+                rect = QRectF(cx - newSize/2, cy - newSize/2, newSize, newSize);
+                qDebug() << "Rectangle too large, limiting to" << newSize/1000.0 << "μm";
             }
+            
+            qDebug() << "Emitting Rectangle:" << rect << "size:" << rect.width()/1000.0 << "x" << rect.height()/1000.0 << "μm";
+            emit objectCreated("Rectangle", rect);
+            
+        } else if (m_currentTool == Tool::DrawPolygon && m_drawPoints.size() >= 3) {
+            // 正确计算 bounds
+            qreal minX = m_drawPoints.first().x(), maxX = minX;
+            qreal minY = m_drawPoints.first().y(), maxY = minY;
+            for (const QPointF& pt : m_drawPoints) {
+                minX = qMin(minX, pt.x());
+                maxX = qMax(maxX, pt.x());
+                minY = qMin(minY, pt.y());
+                maxY = qMax(maxY, pt.y());
+            }
+            QRectF bounds(minX, minY, maxX - minX, maxY - minY);
+            qDebug() << "Emitting Polygon:" << m_drawPoints.size() << "points, bounds:" << bounds;
             emit objectCreated("Polygon", bounds);
+            
         } else if (m_currentTool == Tool::DrawPath && m_drawPoints.size() >= 2) {
-            QRectF bounds;
+            // 正确计算 bounds
+            qreal minX = m_drawPoints.first().x(), maxX = minX;
+            qreal minY = m_drawPoints.first().y(), maxY = minY;
             for (const QPointF& pt : m_drawPoints) {
-                bounds = bounds.united(QRectF(pt, pt));
+                minX = qMin(minX, pt.x());
+                maxX = qMax(maxX, pt.x());
+                minY = qMin(minY, pt.y());
+                maxY = qMax(maxY, pt.y());
             }
+            QRectF bounds(minX, minY, maxX - minX, maxY - minY);
+            qDebug() << "Emitting Path:" << m_drawPoints.size() << "points, bounds:" << bounds;
             emit objectCreated("Path", bounds);
-        } else if (m_currentTool == Tool::DrawCircle && m_drawCircleRadius > 0) {
-            QRectF bounds(m_drawCircleCenter.x() - m_drawCircleRadius,
-                          m_drawCircleCenter.y() - m_drawCircleRadius,
-                          m_drawCircleRadius * 2,
-                          m_drawCircleRadius * 2);
+            
+        } else if (m_currentTool == Tool::DrawCircle) {
+            // 限制半径范围：最小 1μm，最大 50μm
+            double radius = m_drawCircleRadius;
+            if (radius < MIN_SHAPE_SIZE) {
+                radius = DEFAULT_SHAPE_SIZE;  // 默认 5 μm
+                qDebug() << "Circle radius too small, using default:" << radius << "nm";
+            } else if (radius > MAX_SHAPE_SIZE) {
+                radius = MAX_SHAPE_SIZE;  // 最大 50 μm
+                qDebug() << "Circle radius too large, limiting to:" << radius << "nm";
+            }
+            
+            QRectF bounds(m_drawCircleCenter.x() - radius,
+                          m_drawCircleCenter.y() - radius,
+                          radius * 2,
+                          radius * 2);
+            qDebug() << "Emitting Circle, radius:" << radius << "nm (" << (radius/1000.0) << "μm) bounds:" << bounds;
             emit objectCreated("Circle", bounds);
         }
         

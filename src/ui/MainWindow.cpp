@@ -18,6 +18,11 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QApplication>
+#include <QDebug>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 #include <QKeySequence>
 #include <QIcon>
 #include <QStyle>
@@ -304,6 +309,13 @@ void MainWindow::setupConnections()
         m_statusLabel->setText(msg);
     });
     
+    // 连接图形创建信号
+    connect(m_canvas, &CanvasWidget::objectCreated, this, 
+            [this](const QString& type, const QRectF& bounds) {
+        qDebug() << "=== objectCreated signal received ===" << type << bounds;
+        this->onObjectCreated(type, bounds);
+    });
+    
     // 连接 Cell 列表面板信号
     connect(m_cellListPanel, &CellListPanel::cellSelected, this, [this](const QString& cellName) {
         if (m_canvas) {
@@ -332,9 +344,7 @@ void MainWindow::onFileOpen()
         tr("GDS Files (*.gds *.GDS);;All Files (*)"));
     
     if (!file.isEmpty()) {
-        statusBar()->showMessage(tr("Opening: %1").arg(file));
-        // TODO: 打开文件逻辑
-        statusBar()->showMessage(tr("Opened: %1").arg(file), 2000);
+        onImportGDS(file);
     }
 }
 
@@ -367,61 +377,78 @@ void MainWindow::onFileImportGDS()
         tr("GDS Files (*.gds *.GDS);;OASIS Files (*.oas);;All Files (*)"));
     
     if (!file.isEmpty()) {
-        statusBar()->showMessage(tr("Importing: %1").arg(file));
-        
-        // 创建进度对话框
-        QProgressDialog progress(tr("Parsing GDS file..."), tr("Cancel"), 0, 100, this);
-        progress.setWindowModality(Qt::WindowModal);
-        progress.setWindowTitle(tr("Import GDS"));
-        
-        // 设置进度回调
-        m_parser->setProgressCallback([&progress](int p) {
-            progress.setValue(p);
-            if (progress.wasCanceled()) {
-                // 需要通过信号槽来取消
-            }
-        });
-        
-        // 解析 GDS 文件
-        if (m_parser->parse(file)) {
-            auto data = m_parser->getData();
-            if (data && m_canvas) {
-                // 将数据传递给画布
-                m_canvas->setGDSData(data);
-                
-                // 更新图层面板
-                if (m_layerPanel) {
-                    // 提取图层信息
-                    QSet<int> layers;
-                    for (auto it = data->structures.begin(); it != data->structures.end(); ++it) {
-                        const auto& structure = *(it.value());
-                        for (const auto& boundary : structure.boundaries) {
-                            layers.insert(boundary.layer);
-                        }
-                        for (const auto& path : structure.paths) {
-                            layers.insert(path.layer);
-                        }
-                    }
-                    m_layerPanel->setLayers(layers.values());
-                }
-                
-                // 更新 Cell 列表面板
-                if (m_cellListPanel) {
-                    m_cellListPanel->setGDSData(data);
-                }
-                
-                // 自动适配视图
-                m_canvas->fitAll();
-                
-                statusBar()->showMessage(tr("Imported: %1 (%2 structures)")
-                    .arg(file)
-                    .arg(data->structures.size()), 5000);
-            }
-        } else {
-            QMessageBox::warning(this, tr("Import Error"),
-                tr("Failed to import GDS file:\n%1").arg(m_parser->getLastError()));
-            statusBar()->showMessage(tr("Import failed"), 3000);
+        onImportGDS(file);
+    }
+}
+
+void MainWindow::onImportGDS(const QString& file)
+{
+    statusBar()->showMessage(tr("Importing: %1").arg(file));
+    
+    // 创建进度对话框
+    QProgressDialog progress(tr("Parsing GDS file..."), tr("Cancel"), 0, 100, this);
+    progress.setWindowModality(Qt::WindowModal);
+    progress.setWindowTitle(tr("Import GDS"));
+    
+    // 设置进度回调
+    m_parser->setProgressCallback([&progress](int p) {
+        progress.setValue(p);
+        if (progress.wasCanceled()) {
+            // 需要通过信号槽来取消
         }
+    });
+    
+    // 解析 GDS 文件
+    if (m_parser->parse(file)) {
+        auto data = m_parser->getData();
+        if (data && m_canvas) {
+            // MainWindow 也保存数据引用（关键修复！）
+            m_gdsData = data;
+            
+            // 将数据传递给画布
+            m_canvas->setGDSData(data);
+            
+            // 更新图层面板
+            if (m_layerPanel) {
+                // 提取图层信息
+                QSet<int> layers;
+                for (auto it = data->structures.begin(); it != data->structures.end(); ++it) {
+                    auto structure = it.value();
+                    if (!structure) continue;
+                    
+                    for (const auto& boundary : structure->boundaries) {
+                        layers.insert(boundary.layer);
+                    }
+                    for (const auto& path : structure->paths) {
+                        layers.insert(path.layer);
+                    }
+                    for (const auto& text : structure->texts) {
+                        layers.insert(text.layer);
+                    }
+                }
+                
+                m_layerPanel->setLayers(layers.values());
+            }
+            
+            // 更新 Cell 列表面板
+            if (m_cellListPanel) {
+                m_cellListPanel->setGDSData(data);
+            }
+            
+            // 自动适配视图
+            m_canvas->fitAll();
+            
+            qDebug() << "GDS loaded:" << file 
+                     << "structures:" << data->structures.size();
+            
+            statusBar()->showMessage(tr("Imported: %1 (%2 structures)")
+                .arg(file)
+                .arg(data->structures.size()), 5000);
+        }
+    } else {
+        QMessageBox::warning(this, tr("Import Error"),
+            tr("Failed to import GDS file:\n%1").arg(m_parser->getLastError()));
+        statusBar()->showMessage(tr("Import failed"), 3000);
     }
 }
 
@@ -614,6 +641,151 @@ void MainWindow::updateLayersFromGDS()
     }
     
     m_layerPanel->setLayers(layers.values());
+}
+
+//=============================================================================
+// 图形创建槽
+//=============================================================================
+
+void MainWindow::onObjectCreated(const QString& type, const QRectF& bounds)
+{
+    qDebug() << "=== onObjectCreated called ===" << type << bounds;
+    
+    // 检查 bounds 是否有效
+    if (bounds.width() <= 0 || bounds.height() <= 0) {
+        qWarning() << "Invalid bounds, ignoring:" << bounds;
+        statusBar()->showMessage(tr("Invalid shape, try again"), 3000);
+        return;
+    }
+    
+    if (!m_canvas) {
+        qWarning() << "No canvas";
+        statusBar()->showMessage(tr("No canvas"), 3000);
+        return;
+    }
+    
+    // 关键：使用 canvas 当前的结构，不要创建新结构！
+    if (!m_gdsData) {
+        qWarning() << "No GDS data, please open a file first";
+        statusBar()->showMessage(tr("Please open a GDS file first"), 3000);
+        return;
+    }
+    
+    // 获取当前 Structure（使用 canvas 的当前结构）
+    QString currentStructure = m_canvas->currentStructure();
+    qDebug() << "Current structure from canvas:" << currentStructure;
+    
+    if (currentStructure.isEmpty()) {
+        // 使用文件的顶层结构
+        currentStructure = m_gdsData->topStructure;
+        qDebug() << "Using top structure:" << currentStructure;
+    }
+    
+    auto structure = m_gdsData->getStructure(currentStructure);
+    if (!structure) {
+        qWarning() << "Structure not found:" << currentStructure;
+        statusBar()->showMessage(tr("Structure not found"), 3000);
+        return;
+    }
+    
+    qDebug() << "Structure found:" << currentStructure << "boundaries before:" << structure->boundaries.size();
+    
+    // ===== 关键修复：bounds 现在已经是数据库坐标（纳米）！=====
+    // 不需要再做转换，直接使用
+    Coord x1 = static_cast<Coord>(bounds.left());
+    Coord y1 = static_cast<Coord>(bounds.top());
+    Coord x2 = static_cast<Coord>(bounds.right());
+    Coord y2 = static_cast<Coord>(bounds.bottom());
+    
+    // 获取当前图层
+    int currentLayer = 0;  // TODO: 从图层面板获取
+    if (m_layerPanel) {
+        // 暂时使用第一个可见图层
+        // m_layerPanel->getCurrentLayer();
+    }
+    
+    // 根据类型创建图形
+    if (type == "Rectangle") {
+        // 创建矩形边界
+        GDSBoundary boundary;
+        boundary.layer = currentLayer;
+        boundary.dataType = 0;
+        boundary.points.resize(5);
+        boundary.points[0] = DbPoint(x1, y1);
+        boundary.points[1] = DbPoint(x2, y1);
+        boundary.points[2] = DbPoint(x2, y2);
+        boundary.points[3] = DbPoint(x1, y2);
+        boundary.points[4] = DbPoint(x1, y1);  // 闭合
+        
+        structure->boundaries.append(boundary);
+        qDebug() << "Rectangle added, boundaries:" << structure->boundaries.size();
+        
+    } else if (type == "Circle") {
+        // 创建圆形（多边形近似）
+        // bounds 已经是数据库坐标（纳米）
+        double cx = bounds.center().x();
+        double cy = bounds.center().y();
+        double radius = bounds.width() / 2.0;
+        
+        GDSBoundary boundary;
+        boundary.layer = currentLayer;
+        boundary.dataType = 0;
+        
+        // 使用32边形近似圆
+        const int segments = 32;
+        boundary.points.resize(segments + 1);
+        for (int i = 0; i <= segments; ++i) {
+            double angle = 2.0 * M_PI * i / segments;
+            boundary.points[i] = DbPoint(
+                static_cast<Coord>(cx + radius * cos(angle)),
+                static_cast<Coord>(cy + radius * sin(angle))
+            );
+        }
+        
+        structure->boundaries.append(boundary);
+        
+    } else if (type == "Polygon" || type == "Path") {
+        // TODO: 从 CanvasWidget 获取实际点数据
+        // 暂时创建边界框
+        GDSBoundary boundary;
+        boundary.layer = currentLayer;
+        boundary.dataType = 0;
+        boundary.points.resize(5);
+        boundary.points[0] = DbPoint(x1, y1);
+        boundary.points[1] = DbPoint(x2, y1);
+        boundary.points[2] = DbPoint(x2, y2);
+        boundary.points[3] = DbPoint(x1, y2);
+        boundary.points[4] = DbPoint(x1, y1);
+        
+        structure->boundaries.append(boundary);
+    }
+    
+    // 更新边界框
+    if (structure->boundaries.size() > 0) {
+        structure->boundingBox.left = qMin(structure->boundingBox.left, x1);
+        structure->boundingBox.top = qMin(structure->boundingBox.top, y1);
+        structure->boundingBox.right = qMax(structure->boundingBox.right, x2);
+        structure->boundingBox.bottom = qMax(structure->boundingBox.bottom, y2);
+    } else {
+        structure->boundingBox = DbRect(x1, y1, x2, y2);
+    }
+    
+    // 刷新画布
+    m_canvas->update();
+    
+    // 显示状态
+    QString msg = tr("%1 created at (%2, %3) size (%4 x %5) μm")
+        .arg(type)
+        .arg(bounds.x(), 0, 'f', 3)
+        .arg(bounds.y(), 0, 'f', 3)
+        .arg(bounds.width(), 0, 'f', 3)
+        .arg(bounds.height(), 0, 'f', 3);
+    
+    statusBar()->showMessage(msg, 3000);
+    
+    qDebug() << "Object created:" << type 
+             << "layer:" << currentLayer
+             << "bounds:" << bounds;
 }
 
 } // namespace QLayoutEDA
