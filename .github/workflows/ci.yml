@@ -122,7 +122,7 @@ jobs:
           esac
 
       - name: Comment on Issue
-        uses: actions/github-script@v6
+        uses: actions/github-script@v8
         with:
           script: |
             github.rest.issues.createComment({
@@ -133,7 +133,7 @@ jobs:
             })
 
       - name: Assign to Agent
-        uses: actions/github-script@v6
+        uses: actions/github-script@v8
         with:
           script: |
             github.rest.issues.addAssignees({
